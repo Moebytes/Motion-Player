@@ -1,6 +1,5 @@
-import {ipcRenderer, clipboard} from "electron"
-import React, {useEffect, useState, useContext} from "react"
-import {BrightnessContext, ContrastContext, HueContext, SaturationContext, LightnessContext, PixelateContext, BlurContext, SharpenContext} from "../renderer"
+import React, {useEffect, useState} from "react"
+import {useFilterSelector, useFilterActions} from "../store"
 import brightnessIcon from "../assets/icons/brightness.png"
 import contrastIcon from "../assets/icons/contrast.png"
 import hueIcon from "../assets/icons/hue.png"
@@ -15,14 +14,8 @@ import Slider from "react-slider"
 const FXDialog: React.FunctionComponent = (props) => {
     const [visible, setVisible] = useState(false)
     const [hover, setHover] = useState(false)
-    const {brightness, setBrightness} = useContext(BrightnessContext)
-    const {contrast, setContrast} = useContext(ContrastContext)
-    const {hue, setHue} = useContext(HueContext)
-    const {saturation, setSaturation} = useContext(SaturationContext)
-    const {lightness, setLightness} = useContext(LightnessContext)
-    const {pixelate, setPixelate} = useContext(PixelateContext)
-    const {blur, setBlur} = useContext(BlurContext)
-    const {sharpen, setSharpen} = useContext(SharpenContext)
+    const {brightness, contrast, hue, saturation, lightness, blur, sharpen, pixelate} = useFilterSelector()
+    const {setBrightness, setContrast, setHue, setSaturation, setLightness, setBlur, setSharpen, setPixelate} = useFilterActions()
 
     useEffect(() => {
         const showFXDialog = (event: any) => {
@@ -31,11 +24,11 @@ const FXDialog: React.FunctionComponent = (props) => {
         const closeAllDialogs = (event: any, ignore: any) => {
             if (ignore !== "fx") setVisible(false)
         }
-        ipcRenderer.on("show-fx-dialog", showFXDialog)
-        ipcRenderer.on("close-all-dialogs", closeAllDialogs)
+        window.ipcRenderer.on("show-fx-dialog", showFXDialog)
+        window.ipcRenderer.on("close-all-dialogs", closeAllDialogs)
         return () => {
-            ipcRenderer.removeListener("show-fx-dialog", showFXDialog)
-            ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
+            window.ipcRenderer.removeListener("show-fx-dialog", showFXDialog)
+            window.ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
         }
     }, [])
 
@@ -43,9 +36,9 @@ const FXDialog: React.FunctionComponent = (props) => {
         const escapePressed = () => {
             if (visible) setVisible(false)
         }
-        ipcRenderer.on("escape-pressed", escapePressed)
+        window.ipcRenderer.on("escape-pressed", escapePressed)
         return () => {
-            ipcRenderer.removeListener("escape-pressed", escapePressed)
+            window.ipcRenderer.removeListener("escape-pressed", escapePressed)
         }
     })
 

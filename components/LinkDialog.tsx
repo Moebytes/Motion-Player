@@ -1,4 +1,3 @@
-import {ipcRenderer, clipboard} from "electron"
 import React, {useEffect, useState, useRef} from "react"
 import searchIcon from "../assets/icons/search-icon.png"
 import "./styles/linkdialog.less"
@@ -16,18 +15,18 @@ const LinkDialog: React.FunctionComponent = (props) => {
             if (ignore !== "link") setVisible(false)
         }
         const triggerPaste = () => {
-            const text = clipboard.readText()
+            const text = window.clipboard.readText()
             if (text) {
                 searchBox.current!.value += text
             }
         }
-        ipcRenderer.on("show-link-dialog", showLinkDialog)
-        ipcRenderer.on("close-all-dialogs", closeAllDialogs)
-        ipcRenderer.on("trigger-paste", triggerPaste)
+        window.ipcRenderer.on("show-link-dialog", showLinkDialog)
+        window.ipcRenderer.on("close-all-dialogs", closeAllDialogs)
+        window.ipcRenderer.on("trigger-paste", triggerPaste)
         return () => {
-            ipcRenderer.removeListener("show-link-dialog", showLinkDialog)
-            ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
-            ipcRenderer.removeListener("trigger-paste", triggerPaste)
+            window.ipcRenderer.removeListener("show-link-dialog", showLinkDialog)
+            window.ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
+            window.ipcRenderer.removeListener("trigger-paste", triggerPaste)
         }
     }, [])
 
@@ -38,11 +37,11 @@ const LinkDialog: React.FunctionComponent = (props) => {
         const escapePressed = () => {
             if (visible) setVisible(false)
         }
-        ipcRenderer.on("enter-pressed", enterPressed)
-        ipcRenderer.on("escape-pressed", escapePressed)
+        window.ipcRenderer.on("enter-pressed", enterPressed)
+        window.ipcRenderer.on("escape-pressed", escapePressed)
         return () => {
-            ipcRenderer.removeListener("enter-pressed", enterPressed)
-            ipcRenderer.removeListener("escape-pressed", escapePressed)
+            window.ipcRenderer.removeListener("enter-pressed", enterPressed)
+            window.ipcRenderer.removeListener("escape-pressed", escapePressed)
         }
     })
 
@@ -57,7 +56,7 @@ const LinkDialog: React.FunctionComponent = (props) => {
         searchBox.current!.value = ""
         if (text) {
             const status = await fetch(text).then((r) => r.status)
-            if (status !== 404) ipcRenderer.invoke("open-link", text)
+            if (status !== 404) window.ipcRenderer.invoke("open-link", text)
         }
         setVisible(false)
     }

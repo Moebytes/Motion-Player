@@ -1,4 +1,3 @@
-import {ipcRenderer, clipboard} from "electron"
 import React, {useEffect, useState, useRef} from "react"
 import "./styles/contextmenu.less"
 
@@ -21,23 +20,23 @@ const ContextMenu: React.FunctionComponent = (props) => {
     const copy = () => {
         const selectedText = window.getSelection()?.toString().trim()
         if (selectedText) {
-            clipboard.writeText(selectedText)
+            window.clipboard.writeText(selectedText)
         } else {
-            clipboard.clear()
+            window.clipboard.clear()
         }
     }
 
     const paste = () => {
-        ipcRenderer.invoke("trigger-paste")
+        window.ipcRenderer.invoke("trigger-paste")
     }
 
     const copyLoop = () => {
-        ipcRenderer.invoke("copy-loop")
+        window.ipcRenderer.invoke("copy-loop")
 
     }
 
     const pasteLoop = () => {
-        ipcRenderer.invoke("paste-loop")
+        window.ipcRenderer.invoke("paste-loop")
     }
 
     if (visible) {

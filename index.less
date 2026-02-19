@@ -1,21 +1,47 @@
-@import "assets/fonts/fira-sans.less";
-@import "assets/fonts/maven-pro.less";
-@import "assets/fonts/skranji.less";
-@import "assets/fonts/yusei-magic.less";
+@font-face {
+    font-family: "GenEi M Gothic v2";
+    src: url("assets/fonts/GenEiMGothic2-Medium.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "Honoka Shin Antique-Kaku";
+    src: url("assets/fonts/Honoka-Shin-Antique-Kaku_M.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "Tsunagi Gothic Black";
+    src: url("assets/fonts/TsunagiGothic.ttf") format("truetype");
+}
+
+@title-bar-height: 30px;
 
 :root {
-    --selection-color: #a234fc;
-    --bg-color: #240f58; // #48257a;
-    --title-color: #5717d3; // #9e31f5;
-    --text-color: black;
-    --dialog-color: #683aff;
-    --dialog-text: black;
-    --version-reject-color: #6933ff;
-    --version-reject-text: black;
-    --version-accept-color: #8f44ff;
-    --version-accept-text: black;
-    --subtitle-color: #c73aff; // #ff3a85;
-    --subtitle-transform: translateY(0);
+    --selectionColor: #a234fc;
+    --subtitleColor: #c73aff;
+    --subtitleTransform: translateY(0);
+	--closeButton: #582eff;
+	--minimizeButton: #8139ff;
+	--maximizeButton: #b349ff;
+	--textColor: #ffffff;
+	--textStrokeColor: #000000;
+	--barColor: #ffffff;
+	--iconColor: #983dff;
+	--navColor: #bcacff;
+	--playerColor: #c8baff4d;
+	--background: #ffffff;
+}
+
+.dark {
+	--closeButton: #582eff;
+	--minimizeButton: #8139ff;
+	--maximizeButton: #b349ff;
+	--textColor: #ffffff;
+	--textStrokeColor: #000000;
+	--barColor: #000000;
+	--iconColor: #a04cff;
+	--navColor: #0f0929;
+	--playerColor: #0f09294d;
+	--background: #000000;
 }
 
 * {
@@ -27,7 +53,7 @@
 }
 
 html, body {
-    background-color: var(--bg-color);
+    background-color: var(--background);
     overflow-x: hidden !important;  
     overflow-y: hidden !important;
     height: 100%;
@@ -52,7 +78,6 @@ p {
 }
 
 .app {
-    -webkit-app-region: no-drag;
     animation: fadein 0.5s;
     display: flex;
     flex-direction: column;
@@ -62,7 +87,7 @@ p {
 }
 
 ::selection {
-    background-color: var(--selection-color);
+    background-color: var(--selectionColor);
     color: white;
 }
 

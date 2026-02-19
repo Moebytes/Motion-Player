@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  APP_NAME: Video-Player
-  ARTIFACT_PREFIX: video-player
+  APP_NAME: Motion-Player
+  ARTIFACT_PREFIX: motion-player
 
 permissions:
   contents: write

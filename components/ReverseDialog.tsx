@@ -1,4 +1,3 @@
-import {ipcRenderer} from "electron"
 import React, {useEffect, useState} from "react"
 import "./styles/reversedialog.less"
 
@@ -18,13 +17,13 @@ const ReverseDialog: React.FunctionComponent = (props) => {
             setCurrent(progress.current)
             setTotal(progress.total)
         }
-        ipcRenderer.on("show-reverse-dialog", showReverseDialog)
-        ipcRenderer.on("close-all-dialogs", closeAllDialogs)
-        ipcRenderer.on("reverse-progress", reverseProgress)
+        window.ipcRenderer.on("show-reverse-dialog", showReverseDialog)
+        window.ipcRenderer.on("close-all-dialogs", closeAllDialogs)
+        window.ipcRenderer.on("reverse-progress", reverseProgress)
         return () => {
-            ipcRenderer.removeListener("show-reverse-dialog", showReverseDialog)
-            ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
-            ipcRenderer.removeListener("reverse-progress", reverseProgress)
+            window.ipcRenderer.removeListener("show-reverse-dialog", showReverseDialog)
+            window.ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
+            window.ipcRenderer.removeListener("reverse-progress", reverseProgress)
         }
     }, [])
 

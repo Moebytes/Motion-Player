@@ -1,7 +1,4 @@
-import fs from "fs"
 import path from "path"
-
-const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v", ".mp3", ".wav", ".ogg"]
 
 export default class Functions {
     public static arrayIncludes = (str: string, arr: string[]) => {
@@ -17,23 +14,6 @@ export default class Functions {
 
     public static timeout = async (ms: number) => {
         return new Promise((resolve) => setTimeout(resolve, ms))
-    }
-
-    public static removeDirectory = (dir: string) => {
-        if (!fs.existsSync(dir)) return
-        fs.readdirSync(dir).forEach((file: string) => {
-            const current = path.join(dir, file)
-            if (fs.lstatSync(current).isDirectory()) {
-                Functions.removeDirectory(current)
-            } else {
-                fs.unlinkSync(current)
-            }
-        })
-        try {
-            fs.rmdirSync(dir)
-        } catch (e) {
-            console.log(e)
-        }
     }
 
     public static logSlider = (position: number) => {
@@ -123,18 +103,6 @@ export default class Functions {
         // @ts-ignore
         blob.name = name
         return blob as File
-    }
-
-    public static getSortedFiles = async (dir: string) => {
-        const files = await fs.promises.readdir(dir)
-        return files
-            .filter((f) => videoExtensions.includes(path.extname(f)))
-            .map(fileName => ({
-                name: fileName,
-                time: fs.statSync(`${dir}/${fileName}`).mtime.getTime(),
-            }))
-            .sort((a, b) => b.time - a.time)
-            .map(file => file.name)
     }
 
     public static constrainDimensions = (width: number, height: number) => {

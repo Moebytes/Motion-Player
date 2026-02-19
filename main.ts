@@ -1,47 +1,71 @@
-import {app, BrowserWindow, dialog, globalShortcut, ipcMain, shell} from "electron"
-import {autoUpdater} from "electron-updater"
+import {app, BrowserWindow, dialog, globalShortcut, ipcMain, shell, screen} from "electron"
 import Store from "electron-store"
 import * as localShortcut from "electron-shortcuts"
+import dragAddon from "electron-click-drag-plugin"
 import util from "util"
 import child_process from "child_process"
 import path from "path"
 import ffmpeg from "fluent-ffmpeg"
 import process from "process"
-import "./dev-app-update.yml"
-import pack from "./package.json"
 import fs from "fs"
 import functions from "./structures/functions"
+import mainFunctions from "./structures/mainFunctions"
 import Youtube from "youtube.ts"
 
 const exec = util.promisify(child_process.exec)
-require("@electron/remote/main").initialize()
-
-ipcMain.handle("paste-loop", async (event) => {
-  window?.webContents.send("paste-loop")
-})
-
-
-ipcMain.handle("copy-loop", async (event) => {
-  window?.webContents.send("copy-loop")
-})
-
-
-ipcMain.handle("trigger-paste", async (event) => {
-  window?.webContents.send("trigger-paste")
-})
-
 process.setMaxListeners(0)
 let window: Electron.BrowserWindow | null
+
 let ffmpegPath = undefined as any
 if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.app")
 if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.exe")
 if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
 if (!fs.existsSync(ffmpegPath)) ffmpegPath = undefined
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
-autoUpdater.autoDownload = false
+
 const store = new Store()
 const youtube = new Youtube()
 let filePath = ""
+
+ipcMain.handle("close", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    win?.close()
+})
+
+ipcMain.handle("minimize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    win?.minimize()
+})
+
+ipcMain.handle("maximize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+
+    if (win.isMaximized()) {
+      win.unmaximize()
+    } else {
+      win.maximize()
+    }
+})
+
+ipcMain.on("moveWindow", () => {
+  const handle = window?.getNativeWindowHandle()
+  if (!handle) return
+  const windowID = process.platform === "linux" ? handle.readUInt32LE(0) : handle
+  dragAddon.startDrag(windowID)
+})
+
+ipcMain.handle("paste-loop", async (event) => {
+  window?.webContents.send("paste-loop")
+})
+
+ipcMain.handle("copy-loop", async (event) => {
+  window?.webContents.send("copy-loop")
+})
+
+ipcMain.handle("trigger-paste", async (event) => {
+  window?.webContents.send("trigger-paste")
+})
 
 const parseResolution = async (file: string, ffmpegPath?: string) => {
   let command = `"${ffmpegPath ? ffmpegPath : "ffmpeg"}" -i "${functions.escapeQuotes(file)}"`
@@ -103,7 +127,7 @@ ipcMain.handle("export-video", async (event, videoFile: string, savePath: string
     })
   })
   fs.renameSync(tempDest, savePath)
-  functions.removeDirectory(tempDir)
+  mainFunctions.removeDirectory(tempDir)
   shell.showItemInFolder(savePath)
 })
 
@@ -150,7 +174,7 @@ ipcMain.handle("next", async (event, videoFile: string) => {
   if (videoFile.startsWith("http")) return
   if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
   const directory = path.dirname(videoFile)
-  const files = await functions.getSortedFiles(directory)
+  const files = await mainFunctions.getSortedFiles(directory)
   const index = files.findIndex((f) => f === path.basename(videoFile))
   if (index !== -1) {
     if (files[index + 1]) return `file:///${directory}/${files[index + 1]}`
@@ -162,7 +186,7 @@ ipcMain.handle("previous", async (event, videoFile: string) => {
   if (videoFile.startsWith("http")) return
   if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
   const directory = path.dirname(videoFile)
-  const files = await functions.getSortedFiles(directory)
+  const files = await mainFunctions.getSortedFiles(directory)
   const index = files.findIndex((f) => f === path.basename(videoFile))
   if (index !== -1) {
     if (files[index - 1]) return `file:///${directory}/${files[index - 1]}`
@@ -281,7 +305,7 @@ ipcMain.handle("reverse-video", async (event, videoFile: string) => {
     const segments = await splitVideo(videoFile, `${vidDest}/segments/seg%d${ext}`)
     const reversedSegments = await reverseSegments(segments, `${vidDest}/segments/reversed`)
     const reverseFile = await concatSegments(reversedSegments, newDest)
-    functions.removeDirectory(`${vidDest}/segments`)
+    mainFunctions.removeDirectory(`${vidDest}/segments`)
     return reverseFile
 })
 
@@ -314,27 +338,20 @@ ipcMain.handle("save-theme", (event, theme: string) => {
   store.set("theme", theme)
 })
 
-ipcMain.handle("install-update", async (event) => {
-  if (process.platform === "darwin") {
-    const update = await autoUpdater.checkForUpdates()
-    const url = `${pack.repository.url}/releases/download/v${update.updateInfo.version}/${update.updateInfo.files[0].url}`
-    await shell.openExternal(url)
-    app.quit()
-  } else {
-    await autoUpdater.downloadUpdate()
-    autoUpdater.quitAndInstall()
-  }
+ipcMain.handle("get-os", () => {
+  return store.get("os", "mac")
 })
 
-ipcMain.handle("check-for-updates", async (event, startup: boolean) => {
-  window?.webContents.send("close-all-dialogs", "version")
-  const update = await autoUpdater.checkForUpdates()
-  const newVersion = update.updateInfo.version
-  if (pack.version === newVersion) {
-    if (!startup) window?.webContents.send("show-version-dialog", null)
-  } else {
-    window?.webContents.send("show-version-dialog", newVersion)
-  }
+ipcMain.handle("save-os", (event, os: string) => {
+  store.set("os", os)
+})
+
+ipcMain.handle("get-transparent", () => {
+  return store.get("transparent", false)
+})
+
+ipcMain.handle("save-transparent", (event, transparent: boolean) => {
+  store.set("transparent", transparent)
 })
 
 ipcMain.handle("get-opened-file", () => {
@@ -372,11 +389,12 @@ if (!singleLock) {
   })
 
   app.on("ready", () => {
-    window = new BrowserWindow({width: 900, height: 650, minWidth: 520, minHeight: 250, roundedCorners: false, transparent: true, hasShadow: false, frame: false, backgroundColor: "#00000000", center: true, webPreferences: {nodeIntegration: true, contextIsolation: false, enableRemoteModule: true, webSecurity: false}})
-    window.loadFile(path.join(__dirname, "index.html"))
+    window = new BrowserWindow({width: 900, height: 650, minWidth: 520, minHeight: 250, transparent: true, hasShadow: false, 
+      frame: false, backgroundColor: "#00000000", center: true, webPreferences: {
+      preload: path.join(__dirname, "../preload/index.js")}})
+    window.loadFile(path.join(__dirname, "../renderer/index.html"))
     window.removeMenu()
     openFile()
-    require("@electron/remote/main").enable(window.webContents)
     if (ffmpegPath && process.platform !== "win32") fs.chmodSync(ffmpegPath, "777")
     window.on("closed", () => {
       window = null

@@ -2,7 +2,7 @@
 
 <img src="assets/images/readme.png">
 
-This is a simple video player app.
+A simple video player app.
 
 ### Features:
 - Play local videos, links, and YouTube videos (MP4, MKV, MOV, AVI, WEBM, M4V)
@@ -33,22 +33,18 @@ Our design is available here: https://www.figma.com/design/PpYPQAYojONPWedMbDRL8
 
 ### Installation
 
-Download the latest exe installer from the [releases](https://github.com/Moebytes/Video-Player/releases) tab. Updates can be installed automatically.
+Download from [releases](https://github.com/Moebytes/Motion-Player/releases).
 
 ### MacOS
 
 On MacOS unsigned applications won't open, run this to remove the quarantine flag.
 ```
-xattr -d com.apple.quarantine "/Applications/Video Player.app"
+xattr -d com.apple.quarantine "/Applications/Motion Player.app"
 ```
 
-### Bugs and Requests
+### See Also
 
-Open an issue on my GitHub repository.
-
-### Also See
-
-- [Music Player](https://github.com/Moebytes/Music-Player)
-- [Photo Viewer](https://github.com/Moebytes/Photo-Viewer)
+- [Tune Player](https://github.com/Moebytes/Tune-Player)
+- [Pic Viewer](https://github.com/Moebytes/Pic-Viewer)
 
 

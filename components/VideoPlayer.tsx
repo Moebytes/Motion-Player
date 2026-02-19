@@ -1,9 +1,5 @@
-import React, {useEffect, useRef, useState, useContext} from "react"
-import {BrightnessContext, ContrastContext, HueContext, SaturationContext, LightnessContext,
-BlurContext, SharpenContext, PixelateContext} from "../renderer"
-import {ipcRenderer} from "electron" 
-import {app} from "@electron/remote"
-import path from "path"
+import React, {useEffect, useRef, useState} from "react"
+import {useFilterSelector} from "../store"
 import Slider from "react-slider"
 import functions from "../structures/functions"
 import playButton from "../assets/icons/play.png"
@@ -45,6 +41,7 @@ import fastForwardButton from "../assets/icons/fastforward.png"
 import fastForwardButtonHover from "../assets/icons/fastforward-hover.png"
 import {useDropzone} from "react-dropzone"
 import placeholder from "../assets/images/placeholder.png"
+import path from "path"
 import "./styles/videoplayer.less"
 
 const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]
@@ -60,14 +57,7 @@ const VideoPlayer: React.FunctionComponent = (props) => {
     const videoLightnessRef = useRef(null) as React.RefObject<HTMLImageElement>
     const videoSharpnessRef = useRef(null) as React.RefObject<HTMLCanvasElement>
     const videoPixelateRef = useRef(null) as React.RefObject<HTMLCanvasElement>
-    const {brightness, setBrightness} = useContext(BrightnessContext)
-    const {contrast, setContrast} = useContext(ContrastContext)
-    const {hue, setHue} = useContext(HueContext)
-    const {saturation, setSaturation} = useContext(SaturationContext)
-    const {lightness, setLightness} = useContext(LightnessContext)
-    const {pixelate, setPixelate} = useContext(PixelateContext)
-    const {blur, setBlur} = useContext(BlurContext)
-    const {sharpen, setSharpen} = useContext(SharpenContext)
+    const {brightness, contrast, hue, saturation, lightness, blur, sharpen, pixelate} = useFilterSelector()
     const [hover, setHover] = useState(false)
     const [hoverBar, setHoverBar] = useState(false)
     const [playHover, setPlayHover] = useState(false)
@@ -116,7 +106,7 @@ const VideoPlayer: React.FunctionComponent = (props) => {
 
     useEffect(() => {
         const getOpenedFile = async () => {
-            const file = await ipcRenderer.invoke("get-opened-file")
+            const file = await window.ipcRenderer.invoke("get-opened-file")
             if (file) upload(file)
         }
         getOpenedFile()
@@ -137,21 +127,21 @@ const VideoPlayer: React.FunctionComponent = (props) => {
             if (link) {
                 let video = link
                 if (link.includes("youtube.com") || link.includes("youtu.be")) {
-                    video = await ipcRenderer.invoke("download-yt-video", link)
+                    video = await window.ipcRenderer.invoke("download-yt-video", link)
                 }
                 upload(video)
             }
         }
         abSlider.current.slider.style.display = "none"
         initState()
-        ipcRenderer.on("open-file", openFile)
-        ipcRenderer.on("upload-file", uploadFile)
-        ipcRenderer.on("open-link", openLink)
+        window.ipcRenderer.on("open-file", openFile)
+        window.ipcRenderer.on("upload-file", uploadFile)
+        window.ipcRenderer.on("open-link", openLink)
         window.addEventListener("click", onClick)
         return () => {
-            ipcRenderer.removeListener("open-file", openFile)
-            ipcRenderer.removeListener("upload-file", uploadFile)
-            ipcRenderer.removeListener("open-link", openLink)
+            window.ipcRenderer.removeListener("open-file", openFile)
+            window.ipcRenderer.removeListener("upload-file", uploadFile)
+            window.ipcRenderer.removeListener("open-link", openLink)
             window.removeEventListener("click", onClick)
             window.clearInterval(undefined)
         }
@@ -159,7 +149,7 @@ const VideoPlayer: React.FunctionComponent = (props) => {
 
     const initState = async () => {
         let newState = {}
-        const saved = await ipcRenderer.invoke("get-state")
+        const saved = await window.ipcRenderer.invoke("get-state")
         if (saved.speed !== undefined) {
             newState = {...newState, speed: saved.speed}
             videoRef.current!.playbackRate = saved.speed
@@ -288,18 +278,18 @@ const VideoPlayer: React.FunctionComponent = (props) => {
         saveState()
         videoRef.current!.addEventListener("timeupdate", timeUpdate)
         videoRef.current!.addEventListener("ended", onEnd)
-        ipcRenderer.on("trigger-download", triggerDownload)
-        ipcRenderer.on("copy-loop", copyLoop)
-        ipcRenderer.on("paste-loop", pasteLoop)
+        window.ipcRenderer.on("trigger-download", triggerDownload)
+        window.ipcRenderer.on("copy-loop", copyLoop)
+        window.ipcRenderer.on("paste-loop", pasteLoop)
         window.addEventListener("keydown", keyDown)
         window.addEventListener("keyup", keyUp)
         window.addEventListener("wheel", wheel)
         return () => {
             videoRef.current!.removeEventListener("timeupdate", timeUpdate)
             videoRef.current!.removeEventListener("ended", onEnd)
-            ipcRenderer.removeListener("trigger-download", triggerDownload)
-            ipcRenderer.removeListener("copy-loop", copyLoop)
-            ipcRenderer.removeListener("paste-loop", pasteLoop)
+            window.ipcRenderer.removeListener("trigger-download", triggerDownload)
+            window.ipcRenderer.removeListener("copy-loop", copyLoop)
+            window.ipcRenderer.removeListener("paste-loop", pasteLoop)
             window.removeEventListener("keydown", keyDown)
             window.removeEventListener("keyup", keyUp)
             window.removeEventListener("wheel", wheel)
@@ -527,11 +517,11 @@ const VideoPlayer: React.FunctionComponent = (props) => {
     }
 
     const saveState = () => {
-        ipcRenderer.invoke("save-state", {reverse: state.reverse, speed: state.speed, preservesPitch: state.preservesPitch, loop: state.loop, abloop: state.abloop, loopStart: state.loopStart, loopEnd: state.loopEnd})
+        window.ipcRenderer.invoke("save-state", {reverse: state.reverse, speed: state.speed, preservesPitch: state.preservesPitch, loop: state.loop, abloop: state.abloop, loopStart: state.loopStart, loopEnd: state.loopEnd})
     }
 
     const upload = async (file?: string) => {
-        if (!file) file = await ipcRenderer.invoke("select-file")
+        if (!file) file = await window.ipcRenderer.invoke("select-file")
         if (!file) return
         if (!videoExtensions.includes(path.extname(file)) && !audioExtensions.includes(path.extname(file))) return
         let sizeImg = file
@@ -545,7 +535,7 @@ const VideoPlayer: React.FunctionComponent = (props) => {
                 return {...prev, audio: false}
             })
         }
-        if (path.extname(file) === ".mov") file = await ipcRenderer.invoke("mov-to-mp4", file) as string
+        if (path.extname(file) === ".mov") file = await window.ipcRenderer.invoke("mov-to-mp4", file) as string
         setVideoLoaded(false)
         setSubtitlesLoaded(false)
         videoRef.current!.src = file
@@ -555,8 +545,8 @@ const VideoPlayer: React.FunctionComponent = (props) => {
             return {...prev, forwardSrc: file, reverseSrc: null, reverse: false, paused: false}
         })
         refreshState()
-        ipcRenderer.invoke("resize-window", sizeImg)
-        ipcRenderer.invoke("extract-subtitles", file).then((subtitles) => {
+        window.ipcRenderer.invoke("resize-window", sizeImg)
+        window.ipcRenderer.invoke("extract-subtitles", file).then((subtitles) => {
             if (subtitles) {
                 setState((prev) => {
                     return {...prev, subtitleSrc: subtitles}
@@ -568,7 +558,7 @@ const VideoPlayer: React.FunctionComponent = (props) => {
                 })
             }
         })
-        ipcRenderer.invoke("get-reverse-src", file).then((reverseSrc) => {
+        window.ipcRenderer.invoke("get-reverse-src", file).then((reverseSrc) => {
             if (reverseSrc) {
                 setState((prev) => {
                     return {...prev, reverseSrc}
@@ -597,10 +587,10 @@ const VideoPlayer: React.FunctionComponent = (props) => {
             setState((prev) => {
                 return {...prev, paused: true}
             })
-            ipcRenderer.invoke("reverse-dialog", true)
+            window.ipcRenderer.invoke("reverse-dialog", true)
             await new Promise<void>((resolve) => {
-                ipcRenderer.invoke("reverse-video", state.forwardSrc).then((reversed) => {
-                    ipcRenderer.invoke("reverse-dialog", false)
+                window.ipcRenderer.invoke("reverse-video", state.forwardSrc).then((reversed) => {
+                    window.ipcRenderer.invoke("reverse-dialog", false)
                     let percent = videoRef.current!.currentTime / videoRef.current!.duration
                     const newTime = (1-percent) * videoRef.current!.duration
                     videoRef.current!.src = reversed
@@ -794,12 +784,12 @@ const VideoPlayer: React.FunctionComponent = (props) => {
     }
 
     const next = async () => {
-        const nextFile = await ipcRenderer.invoke("next", state.forwardSrc)
+        const nextFile = await window.ipcRenderer.invoke("next", state.forwardSrc)
         if (nextFile) upload(nextFile)
     }
 
     const previous = async () => {
-        const previousFile = await ipcRenderer.invoke("previous", state.forwardSrc)
+        const previousFile = await window.ipcRenderer.invoke("previous", state.forwardSrc)
         if (previousFile) upload(previousFile)
     }
     
@@ -811,18 +801,18 @@ const VideoPlayer: React.FunctionComponent = (props) => {
         let defaultPath = state.forwardSrc
         if (defaultPath.startsWith("http")) {
             let name = path.basename(defaultPath)
-            defaultPath = `${app.getPath("downloads")}/${name}`
+            defaultPath = `${window.app.getPath("downloads")}/${name}`
         }
-        let savePath = await ipcRenderer.invoke("save-dialog", defaultPath)
+        let savePath = await window.ipcRenderer.invoke("save-dialog", defaultPath)
         if (!savePath) return
         if (!path.extname(savePath)) savePath += path.extname(defaultPath)
         videoRef.current?.pause()
         setState((prev) => {
             return {...prev, paused: true}
         })
-        ipcRenderer.invoke("export-dialog", true)
-        await ipcRenderer.invoke("export-video", state.forwardSrc, savePath, {reverse: state.reverse, speed: state.speed, preservesPitch: state.preservesPitch, abloop: state.abloop, loopStart: state.loopStart, loopEnd: state.loopEnd, duration: videoRef.current!.duration})
-        ipcRenderer.invoke("export-dialog", false)
+        window.ipcRenderer.invoke("export-dialog", true)
+        await window.ipcRenderer.invoke("export-video", state.forwardSrc, savePath, {reverse: state.reverse, speed: state.speed, preservesPitch: state.preservesPitch, abloop: state.abloop, loopStart: state.loopStart, loopEnd: state.loopEnd, duration: videoRef.current!.duration})
+        window.ipcRenderer.invoke("export-dialog", false)
         videoRef.current!.load()
         videoRef.current!.play()
         setState((prev) => {

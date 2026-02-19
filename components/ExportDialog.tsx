@@ -1,4 +1,3 @@
-import {ipcRenderer} from "electron"
 import React, {useEffect, useState} from "react"
 import functions from "../structures/functions"
 import "./styles/exportdialog.less"
@@ -24,13 +23,13 @@ const ExportDialog: React.FunctionComponent = (props) => {
             setTimemark(functions.parseSeconds(progress.timemark))
             setDuration(progress.duration)
         }
-        ipcRenderer.on("show-export-dialog", showExportDialog)
-        ipcRenderer.on("close-all-dialogs", closeAllDialogs)
-        ipcRenderer.on("export-progress", exportProgress)
+        window.ipcRenderer.on("show-export-dialog", showExportDialog)
+        window.ipcRenderer.on("close-all-dialogs", closeAllDialogs)
+        window.ipcRenderer.on("export-progress", exportProgress)
         return () => {
-            ipcRenderer.removeListener("show-export-dialog", showExportDialog)
-            ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
-            ipcRenderer.removeListener("export-progress", exportProgress)
+            window.ipcRenderer.removeListener("show-export-dialog", showExportDialog)
+            window.ipcRenderer.removeListener("close-all-dialogs", closeAllDialogs)
+            window.ipcRenderer.removeListener("export-progress", exportProgress)
         }
     }, [])
 
