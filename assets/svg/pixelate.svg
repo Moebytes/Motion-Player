@@ -1,10 +1,8 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g clip-path="url(#clip0_781_923)">
 <path d="M0.512207 0.522491L30.499 1.004V30.6015L0.512207 30.0278V0.522491Z" stroke="currentColor" stroke-width="1.02449" stroke-miterlimit="10"/>
 <path d="M10.4396 2.59195H2.43835V10.5932H10.4396V2.59195Z" fill="currentColor" stroke="currentColor" stroke-width="1.02449" stroke-miterlimit="10"/>
 <path d="M19.4551 11.4641H11.4539V19.4653H19.4551V11.4641Z" fill="currentColor" stroke="currentColor" stroke-width="1.02449" stroke-miterlimit="10"/>
 <path d="M28.5219 2.59195H20.5206V10.5932H28.5219V2.59195Z" fill="currentColor" stroke="currentColor" stroke-width="1.02449" stroke-miterlimit="10"/>
 <path d="M28.5219 20.5308H20.5206V28.5321H28.5219V20.5308Z" fill="currentColor" stroke="currentColor" stroke-width="1.02449" stroke-miterlimit="10"/>
 <path d="M10.4396 20.5308H2.43835V28.5321H10.4396V20.5308Z" fill="currentColor" stroke="currentColor" stroke-width="1.02449" stroke-miterlimit="10"/>
-</g>
 </svg>

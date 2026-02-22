@@ -1,10 +1,3 @@
 <svg width="33" height="33" viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g clip-path="url(#clip0_76_22)">
-<mask id="mask0_76_22" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="33" height="33">
-<path d="M32.287 0H0V32.287H32.287V0Z" fill="white"/>
-</mask>
-<g mask="url(#mask0_76_22)">
 <path d="M11.1746 26.6157H21.4385V16.7188H28.2765L16.3133 5.16347L4.33655 16.7188H11.1746V26.6157Z" fill="currentColor"/>
-</g>
-</g>
 </svg>

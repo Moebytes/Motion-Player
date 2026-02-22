@@ -394,6 +394,13 @@ const applicationMenu = () =>  {
         }
       ]
     },
+    {
+      label: "Edit",
+      submenu: [
+        {role: "copy"},
+        {role: "paste"}
+      ]
+    },
     {role: "windowMenu"},
     {
       role: "help",
