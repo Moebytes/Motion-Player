@@ -21,6 +21,7 @@ const playbackSlice = createSlice({
         loopStart: 0,
         loopEnd: 100,
         savedLoop: [0, 100],
+        stepFlag: true,
         progress: 0,
         secondsProgress: 0,
         seekTo: null as number | null,
@@ -46,6 +47,7 @@ const playbackSlice = createSlice({
         setLoopStart: (state, action) => {state.loopStart = action.payload},
         setLoopEnd: (state, action) => {state.loopEnd = action.payload},
         setSavedLoop: (state, action) => {state.savedLoop = action.payload},
+        setStepFlag: (state, action) => {state.stepFlag = action.payload},
         setProgress: (state, action) => {state.progress = action.payload},
         setSecondsProgress: (state, action) => {state.secondsProgress = action.payload},
         setSeekTo: (state, action) => {state.seekTo = action.payload},
@@ -62,7 +64,7 @@ const {
     setVolume, setPaused, setSubtitles, setLoop, setABLoop,
     setLoopStart, setLoopEnd, setSavedLoop, setAudio,
     setProgress, setSecondsProgress, setSeekTo, setDragging,
-    setDragProgress, setABDragging
+    setDragProgress, setABDragging, setStepFlag
 } = playbackSlice.actions
 
 export const usePlaybackSelector = () => {
@@ -84,6 +86,7 @@ export const usePlaybackSelector = () => {
         loopStart: selector((state) => state.playback.loopStart),
         loopEnd: selector((state) => state.playback.loopEnd),
         savedLoop: selector((state) => state.playback.savedLoop),
+        stepFlag: selector((state) => state.playback.stepFlag),
         progress: selector((state) => state.playback.progress),
         secondsProgress: selector((state) => state.playback.secondsProgress),
         seekTo: selector((state) => state.playback.seekTo),
@@ -113,6 +116,7 @@ export const usePlaybackActions = () => {
         setLoopStart: (state: number) => dispatch(setLoopStart(state)),
         setLoopEnd: (state: number) => dispatch(setLoopEnd(state)),
         setSavedLoop: (state: number[]) => dispatch(setSavedLoop(state)),
+        setStepFlag: (state: boolean) => dispatch(setStepFlag(state)),
         setProgress: (state: number) => dispatch(setProgress(state)),
         setSecondsProgress: (state: number) => dispatch(setSecondsProgress(state)),
         setSeekTo: (state: number | null) => dispatch(setSeekTo(state)),

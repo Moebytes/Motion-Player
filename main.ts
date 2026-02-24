@@ -175,6 +175,7 @@ ipcMain.handle("show-link-dialog", async (event) => {
 })
 
 ipcMain.handle("next", async (event, videoFile: string) => {
+  if (!videoFile) return
   if (videoFile.startsWith("http")) return
   if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
   const directory = path.dirname(videoFile)
@@ -187,6 +188,7 @@ ipcMain.handle("next", async (event, videoFile: string) => {
 })
 
 ipcMain.handle("previous", async (event, videoFile: string) => {
+  if (!videoFile) return
   if (videoFile.startsWith("http")) return
   if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
   const directory = path.dirname(videoFile)

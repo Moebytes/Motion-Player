@@ -32,12 +32,12 @@ const VideoPlayer: React.FunctionComponent = () => {
     const {forwardSrc, reverseSrc, subtitleSrc, reverse, speed, preservesPitch,
         duration, prevVolume, volume, paused, subtitles, loop, abloop, loopStart,
         loopEnd, savedLoop, progress, secondsProgress, seekTo, abDragging,
-        dragging, dragProgress, audio
+        dragging, dragProgress, audio, stepFlag
     } = usePlaybackSelector()
     const {setForwardSrc, setReverseSrc, setSubtitleSrc, setReverse, setSpeed, setPreservesPitch,
         setDuration, setPrevVolume, setVolume, setPaused, setSubtitles, setLoop, setABLoop, setLoopStart,
         setLoopEnd, setSavedLoop, setProgress, setSecondsProgress, setSeekTo, setDragging, setDragProgress,
-        setAudio, setABDragging
+        setAudio, setABDragging, setStepFlag
     } = usePlaybackActions()
     const {brightness, contrast, hue, saturation, lightness, blur, sharpen, pixelate} = useFilterSelector()
     const {videoDrag} = useActiveSelector()
@@ -53,13 +53,19 @@ const VideoPlayer: React.FunctionComponent = () => {
     const videoRef = useRef<HTMLVideoElement>(null)
     const speedPopup = useRef<HTMLDivElement>(null)
     const speedIcon = useRef<HTMLDivElement>(null)
-    const speedImg = useRef<HTMLImageElement>(null)
     const filterRef = useRef<HTMLDivElement>(null)
     const lightnessRef = useRef<HTMLImageElement>(null)
     const sharpnessRef = useRef<HTMLCanvasElement>(null)
     const pixelateRef = useRef<HTMLCanvasElement>(null)
+    const progressBar = useRef(null) as any
     const abSlider = useRef(null) as any
     const speedBar = useRef(null) as any
+
+    useEffect(() => {
+        progressBar.current?.resize()
+        abSlider.current?.resize()
+        speedBar.current?.resize()
+    })
 
     useEffect(() => {
         const getOpenedFile = async () => {
@@ -193,15 +199,41 @@ const VideoPlayer: React.FunctionComponent = () => {
     }, [reverse, dragging, abloop, loopStart, loopEnd])
 
     useEffect(() => {
+        /* Precision on shift click */
         const keyDown = (event: KeyboardEvent) => {
             if (event.shiftKey) {
                 event.preventDefault()
-                speedBar.current!.step = "0.01"
+                setStepFlag(false)
             }
+            /* Play on Spacebar */
             if (event.code === "Space") {
                 event.preventDefault()
                 play()
             }
+        }
+        const keyUp = (event: KeyboardEvent) => {
+            if (!event.shiftKey) {
+                setStepFlag(true)
+            }
+        }
+        const mouseDown = () => {
+            if (!stepFlag) {
+                setStepFlag(true)
+            }
+        }
+        window.addEventListener("keydown", keyDown)
+        window.addEventListener("keyup", keyUp)
+        window.addEventListener("mousedown", mouseDown)
+        return () => {
+            window.removeEventListener("keydown", keyDown)
+            window.removeEventListener("keyup", keyUp)
+            window.removeEventListener("mousedown", mouseDown)
+        }
+    }, [])
+
+    useEffect(() => {
+        const keyDown = (event: KeyboardEvent) => {
+            /* Arrow Key Shortcuts */
             if (event.key === "ArrowLeft") {
                 event.preventDefault()
                 rewind(1)
@@ -219,25 +251,15 @@ const VideoPlayer: React.FunctionComponent = () => {
                 setVolume(volume - 0.05)
             }
         }
-        const keyUp = (event: KeyboardEvent) => {
-            if (!event.shiftKey) {
-                if (Number(speedBar.current!.value) % 0.5 !== 0) {
-                    speedBar.current!.value = String(functions.round(Number(speedBar.current!.value), 0.5))
-                }
-                speedBar.current!.step = "0.5"
-            }
-        }
         const wheel = (event: WheelEvent) => {
             event.preventDefault()
             const delta = Math.sign(event.deltaY)
             setVolume(volume - delta * 0.05)
         }
         window.addEventListener("keydown", keyDown)
-        window.addEventListener("keyup", keyUp)
-        window.addEventListener("wheel", wheel)
+        window.addEventListener("wheel", wheel, {passive: false})
         return () => {
             window.removeEventListener("keydown", keyDown)
-            window.removeEventListener("keyup", keyUp)
             window.removeEventListener("wheel", wheel)
         }
     })
@@ -637,6 +659,8 @@ const VideoPlayer: React.FunctionComponent = () => {
         setSecondsProgress(0)
         setSeekTo(null)
         setDragging(false)
+        setABDragging(false)
+        setStepFlag(true)
         setDragProgress(0)
         videoRef.current!.playbackRate = 1
         videoRef.current!.preservesPitch = true
@@ -669,6 +693,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             }
         }
         setDragging(false)
+        setABDragging(false)
     }
 
     const toggleAB = (value?: boolean) => {
@@ -771,6 +796,12 @@ const VideoPlayer: React.FunctionComponent = () => {
         window.ipcRenderer.send("moveWindow")
     }
 
+    const togglePopup = (popup: "speed" | "pitch") => {
+        if (popup === "speed") {
+            setShowSpeedPopup((prev) => !prev)
+        }
+    }
+
     const {getRootProps} = useDropzone({onDrop})
 
     return (
@@ -782,7 +813,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                 <div className={hoverBar ? "right-bar visible" : "right-bar"} onMouseEnter={() => setHoverBar(true)} onMouseLeave={() => setHoverBar(false)}>
                     <NextIcon className="bar-button" onClick={() => next()}/>
                 </div>
-                {audio ? <img className="audio-placeholder" src={placeholder}/> : null}
+                {audio ? <img className="audio-placeholder" src={placeholder} onMouseDown={handleVideoDrag}/> : null}
                 <div className="video-filters" ref={filterRef} onMouseDown={handleVideoDrag}>
                     <img className="video-lightness-overlay" ref={lightnessRef} src={backFrame}/>
                     <canvas className="video-sharpen-overlay" ref={sharpnessRef}></canvas>
@@ -803,12 +834,12 @@ const VideoPlayer: React.FunctionComponent = () => {
                     <div className="control-row">
                         <p className="control-text">{dragging ? functions.formatSeconds(dragProgress) : functions.formatSeconds(reverse ? duration - progress : progress)}</p>
                         <div className="progress-container" onMouseUp={() => setDragging(false)}>
-                            <Slider className="progress-slider" trackClassName="progress-slider-track" thumbClassName="progress-slider-thumb" 
+                            <Slider ref={progressBar} className="progress-slider" trackClassName="progress-slider-track" thumbClassName="progress-slider-thumb" 
                             onBeforeChange={() => setDragging(true)} onChange={(value) => updateProgressText(value)} onAfterChange={(value) => seek(value)} 
-                            min={0} max={100} step={0.1} value={reverse ? ((1 - progress / duration) * 100) : (progress / duration * 100)}/>
+                            min={0} max={100} step={0.01} value={reverse ? ((1 - progress / duration) * 100) : (progress / duration * 100)}/>
 
                             <Slider ref={abSlider} className="ab-slider" trackClassName="ab-slider-track" thumbClassName="ab-slider-thumb" 
-                            min={0} max={100} step={0.1} value={[loopStart, loopEnd]} onBeforeChange={() => setDragging(true)} 
+                            min={0} max={100} step={0.01} value={[loopStart, loopEnd]} onBeforeChange={() => setDragging(true)} 
                             onChange={(value) => updateProgressTextAB(value)} onAfterChange={(value) => updateABloop(value)}/>
                         </div>
                         <p className="control-text">{functions.formatSeconds(duration)}</p>
@@ -817,17 +848,23 @@ const VideoPlayer: React.FunctionComponent = () => {
                         <ReverseIcon className={`control-button ${reverse && "active-button"}`} onClick={() => updateReverse()}/>
                         {showSpeedPopup ? <div className="speed-popup-container" ref={speedPopup}>
                             <div className="speed-popup">
-                                <Slider className="speed-slider" trackClassName="speed-slider-track" thumbClassName="speed-slider-handle" ref={speedBar} 
-                                onChange={(value: number) => setSpeed(value)} min={0.5} max={4} step={0.5} value={speed}/>
-                                <div className="speed-checkbox-container">
-                                    <p className="speed-text">Pitch?</p>
+                                <div className="speed-popup-inner-container">
+                                    <Slider className="speed-slider" trackClassName="speed-slider-track" thumbClassName="speed-slider-handle" ref={speedBar} 
+                                    min={0.5} max={4} step={0.1} value={speed} onChange={(value: number) => {
+                                        const stepped = stepFlag ? Math.round(value * 2) / 2 : Math.round(value * 10) / 10
+                                        setSpeed(stepped)
+                                    }}/>
+                                    <span className="speed-popup-text">{speed}x</span>
+                                </div>
+                                <div className="speed-popup-inner-container">
+                                    <span className="speed-popup-text">Pitch?</span>
                                     {!preservesPitch ?
-                                    <CheckboxCheckedIcon className="speed-checkbox" onChange={() => updatePreservesPitch()}/> :
-                                    <CheckboxIcon className="speed-checkbox" onChange={() => updatePreservesPitch()}/>}
+                                    <CheckboxCheckedIcon className="speed-checkbox" onClick={() => updatePreservesPitch()}/> :
+                                    <CheckboxIcon className="speed-checkbox" onClick={() => updatePreservesPitch()}/>}
                                 </div>
                             </div>
                         </div> : null}
-                        <SpeedIcon className={`control-button ${speed !== 1 && "active-button"}`} ref={speedImg} onClick={() => speedPopup.current!.style.display === "flex" ? speedPopup.current!.style.display = "none" : speedPopup.current!.style.display = "flex"}/>
+                        <SpeedIcon className={`control-button ${speed !== 1 && "active-button"}`} ref={speedIcon} onClick={() => togglePopup("speed")}/>
                         <LoopIcon className={`control-button ${(loop || abloop) && "active-button"}`} onClick={() => updateLoop()}/>
                         <ABLoopIcon className={`control-button ${abloop && "active-button"}`} onClick={() => toggleAB()}/>
                         <ResetIcon className="control-button" onClick={() => reset()}/>
