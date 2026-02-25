@@ -37,12 +37,12 @@ const VideoPlayer: React.FunctionComponent = () => {
     const {forwardSrc, reverseSrc, subtitleSrc, reverse, speed, preservesPitch,
         duration, prevVolume, volume, paused, subtitles, loop, abloop, loopStart,
         loopEnd, savedLoop, progress, secondsProgress, seekTo, abDragging,
-        dragging, dragProgress, audio, stepFlag
+        dragging, dragProgress, audio, stepFlag, subtitleColor
     } = usePlaybackSelector()
     const {setForwardSrc, setReverseSrc, setSubtitleSrc, setReverse, setSpeed, setPreservesPitch,
         setDuration, setPrevVolume, setVolume, setPaused, setSubtitles, setLoop, setABLoop, setLoopStart,
         setLoopEnd, setSavedLoop, setProgress, setSecondsProgress, setSeekTo, setDragging, setDragProgress,
-        setAudio, setABDragging, setStepFlag
+        setAudio, setABDragging, setStepFlag, setSubtitleColor
     } = usePlaybackActions()
     const {brightness, contrast, hue, saturation, lightness, blur, sharpen, pixelate} = useFilterSelector()
     const {videoDrag} = useActiveSelector()
@@ -113,6 +113,7 @@ const VideoPlayer: React.FunctionComponent = () => {
         window.ipcRenderer.on("upload-file", uploadFile)
         window.ipcRenderer.on("open-link", openLink)
         window.ipcRenderer.on("trigger-download", triggerDownload)
+        window.ipcRenderer.on("trigger-resize", triggerResize)
         window.ipcRenderer.on("cache-cleared", cacheCleared)
         return () => {
             window.removeEventListener("mouseup", onWindowMouseUp)
@@ -120,9 +121,14 @@ const VideoPlayer: React.FunctionComponent = () => {
             window.ipcRenderer.removeListener("upload-file", uploadFile)
             window.ipcRenderer.removeListener("open-link", openLink)
             window.ipcRenderer.removeListener("trigger-download", triggerDownload)
+            window.ipcRenderer.removeListener("trigger-resize", triggerResize)
             window.ipcRenderer.removeListener("cache-cleared", cacheCleared)
         }
     }, [])
+
+    const triggerResize = useEffectEvent(() => {
+        window.ipcRenderer.invoke("resize-window", forwardSrc)
+    })
 
     useEffect(() => {
         const onWindowClick = (event: MouseEvent) => {
@@ -152,6 +158,9 @@ const VideoPlayer: React.FunctionComponent = () => {
         if (saved.loop !== undefined) {
             setLoop(Boolean(saved.loop))
             videoRef.current!.loop = Boolean(saved.loop)
+        }
+        if (saved.subtitleColor !== undefined) {
+            setSubtitleColor(saved.subtitleColor)
         }
     }
 
@@ -190,10 +199,8 @@ const VideoPlayer: React.FunctionComponent = () => {
                 setDuration(duration)
             }
         }
-        if (subtitles) {
-            videoRef.current!.textTracks[0].mode = "showing"
-        } else {
-            videoRef.current!.textTracks[0].mode = "hidden"
+        if (videoRef.current?.textTracks?.[0]) {
+            videoRef.current.textTracks[0].mode = "hidden"
         }
         if (hover) {
             document.documentElement.style.setProperty("--subtitle-transform", "translateY(-80px)")
@@ -360,16 +367,20 @@ const VideoPlayer: React.FunctionComponent = () => {
     }, [brightness, contrast, hue, saturation, lightness, blur, sharpen])
 
     useEffect(() => {
-        if (videoLoaded && videoRef.current) {
-            videoRef.current.style.opacity = "0"
+        if (videoLoaded && videoRef.current && pixelateRef.current && sharpnessRef.current) {
+            videoRef.current.style.opacity = "1"
+            const pixelateCanvas = pixelateRef.current
+            const sharpenOverlay = sharpnessRef.current
+            if (audio) {
+                pixelateCanvas.style.opacity = "0"
+                sharpenOverlay.style.opacity = "0"
+                return
+            }
             const adjustedData = videoData ? functions.videoSpeed(videoData, speed) : null
             videoRef.current.playbackRate = speed
-            const pixelateCanvas = pixelateRef.current
-            if (pixelateCanvas) pixelateCanvas.style.opacity = "1"
-            const pixelateCtx = pixelateCanvas?.getContext("2d")
-            const sharpenOverlay = sharpnessRef.current
-            let sharpenCtx = sharpenOverlay?.getContext("2d")
-            const lightnessCanvas = lightnessRef.current
+            const pixelateCtx = pixelateCanvas.getContext("2d")
+            let sharpenCtx = sharpenOverlay.getContext("2d")
+            
             let video = videoRef.current
             const duration = video.duration
             let frame = videoRef.current as CanvasDrawable
@@ -420,44 +431,6 @@ const VideoPlayer: React.FunctionComponent = () => {
             }
 
             const draw = () => {
-                if (video && sharpenOverlay && pixelateCanvas && lightnessCanvas) {
-                    const landscape = video.videoWidth > video.videoHeight
-                    if (landscape) {
-                        const aspectRatio = video.videoWidth / video.videoHeight
-                        const width = video.clientWidth
-                        const height = Math.floor(video.clientWidth / aspectRatio)
-                        const margin = Math.floor((video.clientHeight - (width / aspectRatio)) / 4)
-                        sharpenOverlay.width = width
-                        sharpenOverlay.height = height
-                        pixelateCanvas.width = width
-                        pixelateCanvas.height = height
-                        lightnessCanvas.width = width
-                        lightnessCanvas.height = height
-                        pixelateCanvas.style.marginTop = `${margin}px`
-                        sharpenOverlay.style.marginTop = `${margin}px`
-                        lightnessCanvas.style.marginTop = `${margin}px`
-                        pixelateCanvas.style.marginLeft = "0px"
-                        sharpenOverlay.style.marginLeft = "0px"
-                        lightnessCanvas.style.marginLeft = "0px"
-                    } else {
-                        const aspectRatio = video.videoHeight / video.videoWidth
-                        const width = Math.floor(video.clientHeight / aspectRatio)
-                        const height = video.clientHeight
-                        const margin = Math.floor((video.clientWidth - (height / aspectRatio)) / 2)
-                        sharpenOverlay.height = height
-                        sharpenOverlay.width = width
-                        pixelateCanvas.height = height
-                        pixelateCanvas.width = width
-                        lightnessCanvas.height = height
-                        lightnessCanvas.width = width
-                        pixelateCanvas.style.marginLeft = `${margin}px`
-                        sharpenOverlay.style.marginLeft = `${margin}px`
-                        lightnessCanvas.style.marginLeft = `${margin}px`
-                        pixelateCanvas.style.marginTop = "0px"
-                        sharpenOverlay.style.marginTop = "0px"
-                        lightnessCanvas.style.marginTop = "0px"
-                    }
-                }
                 if (sharpenOverlay) {
                     if (sharpen !== 0) {
                         const sharpenOpacity = sharpen / 5
@@ -486,10 +459,15 @@ const VideoPlayer: React.FunctionComponent = () => {
                             pixelateCanvas.style.width = "auto"
                             pixelateCanvas.style.height = `${pixelateCanvas.height * pixelate}px`
                         }
+
+                        pixelateCanvas.style.opacity = "1"
+                        video.style.opacity = "0"
                         pixelateCanvas.style.imageRendering = "pixelated"
                     } else {
                         pixelateCanvas.style.width = `${pixelateCanvas.width}px`
                         pixelateCanvas.style.height = `${pixelateCanvas.height}px`
+                        pixelateCanvas.style.opacity = "0"
+                        video.style.opacity = "1"
                         pixelateCanvas.style.imageRendering = "none"
                         pixelateCtx?.clearRect(0, 0, pixelateCanvas.width, pixelateCanvas.height)
                         pixelateCtx?.drawImage(frame, 0, 0, pixelateCanvas.width, pixelateCanvas.height)
@@ -532,7 +510,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             window.cancelAnimationFrame(animationID)
         }
     }, [videoLoaded, videoData, reverse, speed, sharpen, lightness, 
-        pixelate, paused, seekTo, abloop, loopStart, loopEnd])
+        pixelate, paused, seekTo, abloop, loopStart, loopEnd, audio])
 
     const resizeOverlay = () => {
         const sharpenCanvas = sharpnessRef.current
@@ -562,6 +540,9 @@ const VideoPlayer: React.FunctionComponent = () => {
             lightnessCanvas.height = height
             lightnessCanvas.width = width
         }
+        const rect = videoRef.current.getBoundingClientRect()
+        pixelateCanvas.style.top = `${rect.top}px`
+        pixelateCanvas.style.left = `${rect.left}px`
     }
 
     useEffect(() => {
@@ -588,6 +569,10 @@ const VideoPlayer: React.FunctionComponent = () => {
         }, 1000)
     }, [subtitlesLoaded])
 
+    useEffect(() => {
+        document.documentElement.style.setProperty("--subtitleColor", subtitleColor)
+    }, [subtitleColor])
+
     const refreshState = useEffectEvent(() => {
         updateSpeed(speed)
         updatePreservesPitch(preservesPitch)
@@ -595,8 +580,8 @@ const VideoPlayer: React.FunctionComponent = () => {
     })
 
     useEffect(() => {
-        window.ipcRenderer.invoke("save-state", {reverse, speed, preservesPitch, loop, abloop, loopStart, loopEnd})
-    }, [reverse, speed, preservesPitch, loop, abloop, loopStart, loopEnd])
+        window.ipcRenderer.invoke("save-state", {reverse, speed, preservesPitch, loop, abloop, loopStart, loopEnd, subtitleColor})
+    }, [reverse, speed, preservesPitch, loop, abloop, loopStart, loopEnd, subtitleColor])
 
     const upload = useEffectEvent(async (file?: string) => {
         if (!file) file = await window.ipcRenderer.invoke("select-file")
@@ -624,6 +609,7 @@ const VideoPlayer: React.FunctionComponent = () => {
         window.ipcRenderer.invoke("resize-window", sizeImg)
         window.ipcRenderer.invoke("extract-subtitles", file).then((subtitles) => {
             if (subtitles) {
+                setSubtitles(true)
                 setSubtitleSrc(subtitles)
                 setSubtitlesLoaded(true)
             } else {
@@ -944,11 +930,8 @@ const VideoPlayer: React.FunctionComponent = () => {
                             <div className="speed-popup">
                                 <div className="speed-popup-inner-container">
                                     <Slider className="speed-slider" trackClassName="speed-slider-track" thumbClassName="speed-slider-handle" ref={speedBar} 
-                                    min={0.5} max={4} step={0.1} value={speed} onChange={(value: number) => {
-                                        const stepped = stepFlag ? Math.round(value * 2) / 2 : Math.round(value * 10) / 10
-                                        setSpeed(stepped)
-                                    }}/>
-                                    <span className="speed-popup-text">{speed}x</span>
+                                    min={0.5} max={4} step={stepFlag ? 0.5 : 0.1} value={speed} onChange={(value: number) => setSpeed(value)}/>
+                                    <span className="speed-popup-text">{speed.toFixed(1)}x</span>
                                 </div>
                                 <div className="speed-popup-inner-container">
                                     <span className="speed-popup-text">Pitch?</span>
@@ -968,7 +951,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                         <PauseIcon className="control-button play-button" onClick={() => play()}/>}
                         <FastForwardIcon className="control-button rewind-button" onClick={() => fastforward()}/>
                         <SubIcon className={`control-button ${subtitles && "active-button"}`}  onClick={() => updateSubtitles()}/>
-                        <FullscreenIcon className="control-button" onClick={() => fullscreen()}/>
+                        <FullscreenIcon className={`control-button ${document.fullscreenElement && "active-button"}`} onClick={() => fullscreen()}/>
                         {volume <= 0.01 ?
                         <VolumeMuteIcon className="control-button" onClick={() => mute()}/> :
                         volume <= 0.5 ? 

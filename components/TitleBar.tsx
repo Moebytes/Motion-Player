@@ -1,5 +1,6 @@
 import React, {useState} from "react"
-import {useActiveSelector, useActiveActions, useThemeSelector, useThemeActions} from "../store"
+import {useActiveSelector, useActiveActions, useThemeSelector, useThemeActions,
+usePlaybackSelector, usePlaybackActions} from "../store"
 import CircleIcon from "../assets/svg/circle.svg"
 import CircleCloseIcon from "../assets/svg/circle-close.svg"
 import CircleMinimizeIcon from "../assets/svg/circle-minimize.svg"
@@ -15,6 +16,7 @@ import FXIcon from "../assets/svg/fx.svg"
 import VideoDragIcon from "../assets/svg/vid-drag.svg"
 import VideoPanIcon from "../assets/svg/vid-pan.svg"
 import TransparentIcon from "../assets/svg/transparent.svg"
+import PinIcon from "../assets/svg/pin.svg"
 import LightIcon from "../assets/svg/light.svg"
 import DarkIcon from "../assets/svg/dark.svg"
 import WindowsIcon from "../assets/svg/windows.svg"
@@ -24,8 +26,10 @@ import "./styles/titlebar.less"
 const TitleBar: React.FunctionComponent = () => {
     const {hover, videoDrag} = useActiveSelector()
     const {setVideoDrag} = useActiveActions()
-    const {theme, os, transparent} = useThemeSelector()
-    const {setTheme, setOS, setTransparent} = useThemeActions()
+    const {theme, os, transparent, pinned} = useThemeSelector()
+    const {setTheme, setOS, setTransparent, setPinned} = useThemeActions()
+    const {subtitles, subtitleColor} = usePlaybackSelector()
+    const {setSubtitleColor} = usePlaybackActions()
     const [iconHover, setIconHover] = useState(false)
 
     const onMouseDown = () => {
@@ -77,6 +81,10 @@ const TitleBar: React.FunctionComponent = () => {
         setTransparent(!transparent)
     }
 
+    const switchPinned = () => {
+        setPinned(!pinned)
+    }
+
     const macTitleBar = () => {
         return (
             <div className="title-group-container">
@@ -104,10 +112,15 @@ const TitleBar: React.FunctionComponent = () => {
                     <VideoDragIcon className="title-bar-button" onClick={drag}/> :
                     <VideoPanIcon className="title-bar-button" onClick={drag}/>}
                     <TransparentIcon className="title-bar-button" onClick={switchTransparency}/>
+                    <PinIcon className={`title-bar-button ${pinned && "title-button-active"}`} onClick={switchPinned}/>
                     {theme === "light" ?
                     <LightIcon className="title-bar-button" onClick={switchTheme}/> :
                     <DarkIcon className="title-bar-button" onClick={switchTheme}/>}
                     <MacIcon className="title-bar-button" onClick={switchOSStyle}/>
+
+                    {subtitles ? <>
+                    <input type="color" className="subtitle-color-box" onChange={(event) => setSubtitleColor(event.target.value)} value={subtitleColor}></input>
+                    </> : null}
                 </div>
             </div>
         )
@@ -130,10 +143,15 @@ const TitleBar: React.FunctionComponent = () => {
                     <VideoDragIcon className="title-bar-button" onClick={drag}/> :
                     <VideoPanIcon className="title-bar-button" onClick={drag}/>}
                     <TransparentIcon className="title-bar-button" onClick={switchTransparency}/>
+                    <PinIcon className={`title-bar-button ${pinned && "title-button-active"}`} onClick={switchPinned}/>
                     {theme === "light" ?
                     <LightIcon className="title-bar-button" onClick={switchTheme}/> :
                     <DarkIcon className="title-bar-button" onClick={switchTheme}/>}
                     <WindowsIcon className="title-bar-button" onClick={switchOSStyle}/>
+
+                    {subtitles ? <>
+                    <input type="color" className="subtitle-color-box" onChange={(event) => setSubtitleColor(event.target.value)} value={subtitleColor}></input>
+                    </> : null}
                 </div>
             </div>
             <div className="title-group-container">

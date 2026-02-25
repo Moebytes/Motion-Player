@@ -17,7 +17,8 @@
 
 :root {
     --selectionColor: #a234fc;
-    --subtitleColor: #c73aff;
+    --titleActive: #ff4cd5;
+    --subtitleColor: #ffffff;
     --subtitleTransform: translateY(0);
 	--closeButton: #582eff;
 	--minimizeButton: #8139ff;
@@ -93,20 +94,8 @@ p {
     color: white;
 }
 
-::-webkit-scrollbar {
-    width: 20px;
-}
-  
-::-webkit-scrollbar-track {
-    background: #000000;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #5a5a5a;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #303030;
+*::-webkit-scrollbar {
+    display: none;
 }
 
 input[type="search"]::-webkit-search-decoration,

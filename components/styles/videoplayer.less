@@ -2,31 +2,27 @@
 @import "./titlebar.less";
 
 .video-player {
-    padding-top: @title-bar-height;
     display: flex;
     width: 100%;
     flex-direction: column;
 }
 
 .video-player-container {
-    width: 100%;
-    height: 100%;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
     display: flex;
-    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
 }
 
 .video {
     z-index: 100;
-    width: 100vw;
-    height: 100vh;
-    margin-top: -@title-bar-height;
 }
 
 .audio-placeholder {
     z-index: 101;
-    width: 100vw;
-    height: 100vh;
-    margin-top: -@title-bar-height;
 }
 
 .control-title-container {
@@ -322,7 +318,7 @@ video::cue {
 
 video::-webkit-media-text-track-display {
     z-index: 1000;
-    font-family: "GenEi M Gothic v2", sans-serif;
+    font-family: "Honoka Shin Antique-Kaku", sans-serif;
     font-size: 35px;
     color: var(--subtitleColor);
     -webkit-text-stroke: 2px black;
@@ -374,55 +370,39 @@ video::-webkit-media-text-track-container {
 
 .video-filters {
     position: relative;
+    width: 100%;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    width: max-content;
-    height: max-content;
 }
 
 .video-sharpen-overlay {
     z-index: 801;
-    position: absolute;
-    margin: auto;
-    margin-top: 0px;
-    margin-bottom: 0px;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    background-size: cover;
-    opacity: 0;
 }
 
 .video-lightness-overlay {
     z-index: 802;
-    position: absolute;
-    margin: auto;
-    margin-top: 0px;
-    margin-bottom: 0px;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    opacity: 0;
 }
 
 .video-pixelate-canvas {
     z-index: 800;
     image-rendering: pixelated;
     position: absolute;
-    margin: auto;
-    margin-top: 0px;
-    margin-bottom: 0px;
-    top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    opacity: 0;
+    top: 0;
+}
+
+.video,
+.video-lightness-overlay,
+.video-sharpen-overlay,
+.audio-placeholder {
+    position: absolute;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
 }
 
 .video-subtitle-container {
@@ -443,9 +423,19 @@ video::-webkit-media-text-track-container {
 }
 
 .video-subtitles {
-    font-family: "GenEi M Gothic v2", sans-serif;
+    font-family: "Honoka Shin Antique-Kaku", sans-serif;
     font-size: 30px;
     color: var(--subtitleColor);
     -webkit-text-stroke: 2px black;
     paint-order: stroke fill;
+}
+
+.video-player-container:fullscreen .video,
+.video-player-container:fullscreen .video-lightness-overlay,
+.video-player-container:fullscreen .video-sharpen-overlay,
+.video-player-container:fullscreen .audio-placeholder {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
 }

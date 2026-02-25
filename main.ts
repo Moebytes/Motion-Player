@@ -70,7 +70,8 @@ const parseResolution = async (file: string, ffmpegPath?: string) => {
 ipcMain.handle("resize-window", async (event, videoFile: string) => {
   const dim = await parseResolution(videoFile, ffmpegPath)
   const {width, height} = functions.constrainDimensions(dim.width, dim.height)
-  // window?.setSize(width, height, true)
+  window?.setAspectRatio(width / height)
+  window?.setSize(width, height, true)
 })
 
 ipcMain.handle("mov-to-mp4", async (event, videoFile: string) => {
@@ -318,6 +319,15 @@ ipcMain.handle("save-transparent", (event, transparent: boolean) => {
   store.set("transparent", transparent)
 })
 
+ipcMain.handle("get-pinned", () => {
+  return store.get("pinned", false)
+})
+
+ipcMain.handle("save-pinned", (event, pinned: boolean) => {
+  store.set("pinned", pinned)
+  window?.setAlwaysOnTop(pinned)
+})
+
 ipcMain.handle("get-vid-drag", () => {
   return store.get("vid-drag", true)
 })
@@ -351,6 +361,9 @@ ipcMain.handle("context-menu", (event, {hasSelection}) => {
   const template: MenuItemConstructorOptions[] = [
     {label: "Copy", enabled: hasSelection, role: "copy"},
     {label: "Paste", role: "paste"},
+    {type: "separator"},
+    {label: "Lock Aspect Ratio", click: () => event.sender.send("trigger-resize")},
+    {label: "Unlock Aspect Ratio", click: () => window.setAspectRatio(0)},
     {type: "separator"},
     {label: "Copy Loop", click: () => event.sender.send("copy-loop")},
     {label: "Paste Loop", click: () => event.sender.send("paste-loop")},
@@ -398,6 +411,25 @@ const applicationMenu = () =>  {
       submenu: [
         {role: "copy"},
         {role: "paste"}
+      ]
+    },
+    {
+      label: "View",
+      submenu: [
+        {
+          label: "Lock Aspect Ratio",
+          click: (item, window) => {
+            const win = window as BrowserWindow
+            win?.webContents.send("trigger-resize")
+          }
+        },
+        {
+          label: "Unlock Aspect Ratio",
+          click: (item, window) => {
+            const win = window as BrowserWindow
+            win.setAspectRatio(0)
+          }
+        }
       ]
     },
     {role: "windowMenu"},

@@ -229,28 +229,28 @@ export default class Functions {
         const maxHeight = 942
         const minWidth = 520
         const minHeight = 250
+
         let newWidth = width
         let newHeight = height
-        if (width > maxWidth) {
-            const scale = width / maxWidth
-            newWidth /= scale
-            newHeight /= scale
-        }
-        if (height > maxHeight) {
-            const scale = height / maxHeight
-            newHeight /= scale
-            newWidth /= scale
-        }
-        if (minWidth > width) {
-            const scale = minWidth / width
+
+        if (newWidth > maxWidth || newHeight > maxHeight) {
+            const scale = Math.min(
+                maxWidth / newWidth,
+                maxHeight / newHeight
+            )
             newWidth *= scale
             newHeight *= scale
         }
-        if (minHeight > height) {
-            const scale = minHeight / height
-            newHeight *= scale
+
+        if (newWidth < minWidth || newHeight < minHeight) {
+            const scale = Math.max(
+                minWidth / newWidth,
+                minHeight / newHeight
+            )
             newWidth *= scale
+            newHeight *= scale
         }
+        
         return {width: Math.floor(newWidth), height: Math.floor(newHeight)}
     }
 

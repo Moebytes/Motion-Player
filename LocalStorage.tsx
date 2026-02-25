@@ -30,8 +30,8 @@ const darkColorList = {
 }
 
 const LocalStorage: React.FunctionComponent = () => {
-    const {theme, os, transparent} = useThemeSelector()
-    const {setTheme, setOS, setTransparent} = useThemeActions()
+    const {theme, os, transparent, pinned} = useThemeSelector()
+    const {setTheme, setOS, setTransparent, setPinned} = useThemeActions()
     const {videoDrag} = useActiveSelector()
     const {setVideoDrag} = useActiveActions()
 
@@ -86,6 +86,18 @@ const LocalStorage: React.FunctionComponent = () => {
     useEffect(() => {
         window.ipcRenderer.invoke("save-transparent", transparent)
     }, [transparent])
+
+    useEffect(() => {
+        const initPinned = async () => {
+            const savedPinned = await window.ipcRenderer.invoke("get-pinned")
+            if (savedPinned) setPinned(savedPinned)
+        }
+        initPinned()
+    }, [])
+
+    useEffect(() => {
+        window.ipcRenderer.invoke("save-pinned", pinned)
+    }, [pinned])
 
     useEffect(() => {
         const initVideoDrag = async () => {

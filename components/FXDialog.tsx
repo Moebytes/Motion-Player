@@ -62,7 +62,7 @@ const FXDialog: React.FunctionComponent = (props) => {
         return (
             <section className="fx-dialog" onMouseDown={close}>
                 <div className={`fx-dropdown ${!fxDialogActive ? `hide-fx-dropdown` : ""}`} onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}
-                style={{marginRight: "345px", top: "30px"}}>
+                style={{marginLeft: "260px", top: "30px"}}>
                     <div className="fx-dropdown-row">
                         <BrightnessIcon className="fx-dropdown-img"/>
                         <span className="fx-dropdown-text">Brightness</span>

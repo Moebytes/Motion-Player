@@ -16,6 +16,7 @@ const playbackSlice = createSlice({
         volume: 1,
         paused: false,
         subtitles: false,
+        subtitleColor: "#ffffff",
         loop: false,
         abloop: false,
         loopStart: 0,
@@ -42,6 +43,7 @@ const playbackSlice = createSlice({
         setVolume: (state, action) => {state.volume = action.payload},
         setPaused: (state, action) => {state.paused = action.payload},
         setSubtitles: (state, action) => {state.subtitles = action.payload},
+        setSubtitleColor: (state, action) => {state.subtitleColor = action.payload},
         setLoop: (state, action) => {state.loop = action.payload},
         setABLoop: (state, action) => {state.abloop = action.payload},
         setLoopStart: (state, action) => {state.loopStart = action.payload},
@@ -64,7 +66,7 @@ const {
     setVolume, setPaused, setSubtitles, setLoop, setABLoop,
     setLoopStart, setLoopEnd, setSavedLoop, setAudio,
     setProgress, setSecondsProgress, setSeekTo, setDragging,
-    setDragProgress, setABDragging, setStepFlag
+    setDragProgress, setABDragging, setStepFlag, setSubtitleColor
 } = playbackSlice.actions
 
 export const usePlaybackSelector = () => {
@@ -81,6 +83,7 @@ export const usePlaybackSelector = () => {
         volume: selector((state) => state.playback.volume),
         paused: selector((state) => state.playback.paused),
         subtitles: selector((state) => state.playback.subtitles),
+        subtitleColor: selector((state) => state.playback.subtitleColor),
         loop: selector((state) => state.playback.loop),
         abloop: selector((state) => state.playback.abloop),
         loopStart: selector((state) => state.playback.loopStart),
@@ -111,6 +114,7 @@ export const usePlaybackActions = () => {
         setVolume: (state: number) => dispatch(setVolume(state)),
         setPaused: (state: boolean) => dispatch(setPaused(state)),
         setSubtitles: (state: boolean) => dispatch(setSubtitles(state)),
+        setSubtitleColor: (state: string) => dispatch(setSubtitleColor(state)),
         setLoop: (state: boolean) => dispatch(setLoop(state)),
         setABLoop: (state: boolean) => dispatch(setABLoop(state)),
         setLoopStart: (state: number) => dispatch(setLoopStart(state)),
