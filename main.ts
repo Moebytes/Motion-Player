@@ -468,7 +468,7 @@ if (!singleLock) {
     applicationMenu()
     window.removeMenu()
     openFile()
-    //if (ffmpegPath && process.platform !== "win32") fs.chmodSync(ffmpegPath, "777")
+    if (ffmpegPath && process.platform === "darwin") fs.chmodSync(ffmpegPath, "777")
     window.webContents.on("did-finish-load", () => {
       window?.show()
     })
