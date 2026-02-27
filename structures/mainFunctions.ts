@@ -32,4 +32,28 @@ export default class MainFunctions {
             .sort((a, b) => b.time - a.time)
             .map(file => file.name)
     }
+
+    public static getNodePath = () => {
+        const exists = (path: string) => fs.existsSync(path)
+
+        if (process.platform === "win32") {
+            const winPaths = [
+                "C:\\Program Files\\nodejs\\node.exe",
+                "C:\\Program Files (x86)\\nodejs\\node.exe"
+            ]
+            return winPaths.find(exists) ?? "node"
+        } else if (process.platform === "darwin") {
+            const macPaths = [
+                "/opt/homebrew/bin/node",
+                "/usr/local/bin/node"
+            ]
+            return macPaths.find(exists) ?? "node"
+        } else {
+            const linuxPaths = [
+                "/usr/bin/node",
+                "/usr/local/bin/node"
+            ]
+            return linuxPaths.find(exists) ?? "node"
+        }
+    }
 }

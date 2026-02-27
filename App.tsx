@@ -1,5 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css"
-import React from "react"
+import React, { useEffect } from "react"
 import {createRoot} from "react-dom/client"
 import {Provider} from "react-redux"
 import store, {useActiveSelector, useActiveActions} from "./store"
@@ -16,6 +16,10 @@ import "./index.less"
 const App = () => {
   const {fxDialogActive} = useActiveSelector()
   const {setHover} = useActiveActions()
+
+  useEffect(() => {
+    window.ipcRenderer.on("debug", console.log)
+  })
   
   return (
     <main className="app" onMouseEnter={() => setHover(true)} onMouseLeave={() => !fxDialogActive && setHover(false)}>

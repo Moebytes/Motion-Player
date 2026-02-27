@@ -35,7 +35,8 @@
       },
       "category": "public.app-category.video",
       "extraFiles": [
-        "ffmpeg/ffmpeg.app"
+        "ffmpeg/ffmpeg.app",
+        "ytdl/yt-dlp.app"
       ]
     },
     "dmg": {
@@ -52,7 +53,8 @@
         "arch": "x64"
       },
       "extraFiles": [
-        "ffmpeg/ffmpeg.exe"
+        "ffmpeg/ffmpeg.exe",
+        "ytdl/yt-dlp.exe"
       ]
     },
     "nsis": {
@@ -71,7 +73,8 @@
       },
       "category": "Video",
       "extraFiles": [
-        "ffmpeg/ffmpeg"
+        "ffmpeg/ffmpeg",
+        "ytdl/yt-dlp"
       ]
     },
     "files": [

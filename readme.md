@@ -25,6 +25,10 @@ A simple video player app.
 - Ctrl O: Upload file
 - Ctrl S: Download file
 
+### Node.js
+
+Downloading YouTube videos will require Node.js. You must install it separately: https://nodejs.org/en
+
 ### Design
 
 Our design is available here: https://www.figma.com/design/PpYPQAYojONPWedMbDRL8t/Motion-Player 

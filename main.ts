@@ -21,10 +21,19 @@ let ffmpegPath = undefined as any
 if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.app")
 if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.exe")
 if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
+if (process.env.DEVELOPMENT === "true") ffmpegPath = "./ffmpeg/ffmpeg.app"
 if (!fs.existsSync(ffmpegPath)) ffmpegPath = undefined
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
 
+let ytdlPath = undefined as any
+if (process.platform === "darwin") ytdlPath = path.join(app.getAppPath(), "../../ytdl/yt-dlp.app")
+if (process.platform === "win32") ytdlPath = path.join(app.getAppPath(), "../../ytdl/yt-dlp.exe")
+if (process.platform === "linux") ytdlPath = path.join(app.getAppPath(), "../../ytdl/yt-dlp")
+if (process.env.DEVELOPMENT === "true") ytdlPath = "./ytdl/yt-dlp.app"
+if (!fs.existsSync(ytdlPath)) ytdlPath = "yt-dlp"
+
 const store = new Store()
+let initialTransparent = process.platform === "win32" ? store.get("transparent", false) as boolean : true
 const youtube = new Youtube()
 let filePath = ""
 
@@ -79,7 +88,7 @@ ipcMain.handle("mov-to-mp4", async (event, videoFile: string) => {
   const baseFlags = ["-pix_fmt", "yuv420p", "-movflags", "+faststart"]
   const ext = path.extname(videoFile)
   const name = path.basename(videoFile, ext)
-  const savePath = path.join(app.getAppPath(), `../assets/videos/${name}.mp4`)
+  const savePath = path.join(app.getPath("documents"), `Motion Player/videos/${name}.mp4`)
   if (!fs.existsSync(path.dirname(savePath))) fs.mkdirSync(path.dirname(savePath), {recursive: true})
   if (fs.existsSync(savePath)) return savePath
   await new Promise<void>((resolve) => {
@@ -166,8 +175,14 @@ ipcMain.handle("trigger-download", async (event, link: string) => {
   window?.webContents.send("trigger-download", link)
 })
 
-ipcMain.handle("download-yt-video", async (event, link: string) => {
-  return youtube.util.downloadVideo(link, path.join(app.getAppPath(), "../assets/videos"), {format: "mp4"})
+ipcMain.handle("download-yt-video", async (event, url: string) => {
+  const name = await youtube.util.getTitle(url)
+  const savePath = path.join(app.getPath("documents"), `Motion Player/videos/${name}.mp4`)
+  let runtimes = `--js-runtimes node:"${mainFunctions.getNodePath()}" --ffmpeg-location "${ffmpegPath ?? "ffmpeg"}"`
+  let command = `"${ytdlPath ? ytdlPath : "yt-dlp"}" ${runtimes} -t mp4 "${functions.escapeQuotes(url)}" -o "${savePath}"`
+  const str = await exec(command).then((s: any) => s.stdout).catch((e: any) => e.stderr)
+  window?.webContents.send("debug", str)
+  return savePath
 })
 
 ipcMain.handle("open-link", async (event, link: string) => {
@@ -237,7 +252,7 @@ ipcMain.handle("upload-file", () => {
 ipcMain.handle("extract-subtitles", async (event, videoFile) => {
     if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
     const name = path.basename(videoFile, path.extname(videoFile))
-    const vidDest = path.join(app.getAppPath(), `../assets/subtitles`)
+    const vidDest = path.join(app.getPath("documents"), `Motion Player/subtitles`)
     if (!fs.existsSync(vidDest)) fs.mkdirSync(vidDest, {recursive: true})
     const newDest = path.join(vidDest, `./${name}.vtt`)
     return new Promise<string>((resolve, reject) => {
@@ -253,7 +268,7 @@ ipcMain.handle("extract-subtitles", async (event, videoFile) => {
 ipcMain.handle("get-reverse-src", async (event, videoFile: string) => {
   const ext = path.extname(videoFile)
   const name = path.basename(videoFile, ext)
-  const vidDest = path.join(app.getAppPath(), `../assets/videos/`)
+  const vidDest = path.join(app.getPath("documents"), `Motion Player/audio`)
   const newDest = path.join(vidDest, `./${name}_reverse${ext}`)
   if (fs.existsSync(newDest)) return newDest
   return null
@@ -263,10 +278,10 @@ ipcMain.handle("reverse-audio", async (event, videoFile: string) => {
     if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
     const ext = path.extname(videoFile)
     const name = path.basename(videoFile, ext)
-    const vidDest = path.join(app.getAppPath(), `../assets/videos/`)
-    const newDest = path.join(vidDest, `./${name}_reverse${ext}`)
-
+    const vidDest = path.join(app.getPath("documents"), `Motion Player/audio`)
     if (!fs.existsSync(vidDest)) fs.mkdirSync(vidDest, {recursive: true})
+
+    const newDest = path.join(vidDest, `./${name}_reverse${ext}`)
 
     const baseFlags = ["-pix_fmt", "yuv420p", "-movflags", "+faststart"]
     const flags = ["-map", "0:v", "-c:v", "copy", "-map", "0:a", "-af", "areverse", "-c:a aac"]
@@ -370,10 +385,12 @@ ipcMain.handle("context-menu", (event, {hasSelection}) => {
     {label: "Paste Loop", click: () => event.sender.send("paste-loop")},
     {type: "separator"},
     {label: "Clear Cache", click: () => {
-      const videoPath = path.join(app.getAppPath(), `../assets/videos`)
-      const subtitlePath = path.join(app.getAppPath(), `../assets/subtitles`)
+      const videoPath = path.join(app.getPath("documents"), `Motion Player/videos`)
+      const subtitlePath = path.join(app.getPath("documents"), `Motion Player/subtitles`)
+      const audioPath = path.join(app.getPath("documents"), `Motion Player/audio`)
       mainFunctions.removeDirectory(videoPath)
       mainFunctions.removeDirectory(subtitlePath)
+      mainFunctions.removeDirectory(audioPath)
       event.sender.send("cache-cleared")
     }}
   ]
@@ -462,7 +479,7 @@ if (!singleLock) {
   })
 
   app.on("ready", () => {
-    window = new BrowserWindow({width: 900, height: 650, minWidth: 520, minHeight: 250, transparent: process.platform !== "win32", hasShadow: false, 
+    window = new BrowserWindow({width: 900, height: 650, minWidth: 520, minHeight: 250, transparent: initialTransparent, hasShadow: false, 
       frame: false, show: false, resizable: true, backgroundColor: "#00000000", center: true, webPreferences: {
       preload: path.join(__dirname, "../preload/index.js")}})
     window.loadFile(path.join(__dirname, "../renderer/index.html"))
