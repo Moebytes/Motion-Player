@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 
-const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v", ".mp3", ".wav", ".ogg"]
+const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]
 
 export default class MainFunctions {
     public static removeDirectory = (dir: string) => {

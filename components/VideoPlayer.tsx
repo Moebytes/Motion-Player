@@ -21,12 +21,10 @@ import VolumeMuteIcon from "../assets/svg/volume-mute.svg"
 import RewindIcon from "../assets/svg/rewind.svg"
 import FastForwardIcon from "../assets/svg/fastforward.svg"
 import {useDropzone} from "react-dropzone"
-import placeholder from "../assets/images/placeholder.png"
 import path from "path"
 import "./styles/videoplayer.less"
 
 const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]
-const audioExtensions = [".mp3", ".wav", ".ogg"]
 
 let videoID = 0
 let animationID = 0
@@ -37,12 +35,12 @@ const VideoPlayer: React.FunctionComponent = () => {
     const {forwardSrc, reverseSrc, subtitleSrc, reverse, speed, preservesPitch,
         duration, prevVolume, volume, paused, subtitles, loop, abloop, loopStart,
         loopEnd, savedLoop, progress, secondsProgress, seekTo, abDragging,
-        dragging, dragProgress, audio, stepFlag, subtitleColor
+        dragging, dragProgress, stepFlag, subtitleColor
     } = usePlaybackSelector()
     const {setForwardSrc, setReverseSrc, setSubtitleSrc, setReverse, setSpeed, setPreservesPitch,
         setDuration, setPrevVolume, setVolume, setPaused, setSubtitles, setLoop, setABLoop, setLoopStart,
         setLoopEnd, setSavedLoop, setProgress, setSecondsProgress, setSeekTo, setDragging, setDragProgress,
-        setAudio, setABDragging, setStepFlag, setSubtitleColor
+        setABDragging, setStepFlag, setSubtitleColor
     } = usePlaybackActions()
     const {brightness, contrast, hue, saturation, lightness, blur, sharpen, pixelate} = useFilterSelector()
     const {videoDrag} = useActiveSelector()
@@ -127,7 +125,9 @@ const VideoPlayer: React.FunctionComponent = () => {
     }, [])
 
     const triggerResize = useEffectEvent(() => {
-        window.ipcRenderer.invoke("resize-window", forwardSrc)
+        const width = videoRef.current?.videoWidth
+        const height = videoRef.current?.videoHeight
+        window.ipcRenderer.invoke("resize-window", {width, height})
     })
 
     useEffect(() => {
@@ -371,11 +371,6 @@ const VideoPlayer: React.FunctionComponent = () => {
             videoRef.current.style.opacity = "1"
             const pixelateCanvas = pixelateRef.current
             const sharpenOverlay = sharpnessRef.current
-            if (audio) {
-                pixelateCanvas.style.opacity = "0"
-                sharpenOverlay.style.opacity = "0"
-                return
-            }
             const adjustedData = videoData ? functions.videoSpeed(videoData, speed) : null
             videoRef.current.playbackRate = speed
             const pixelateCtx = pixelateCanvas.getContext("2d")
@@ -510,7 +505,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             window.cancelAnimationFrame(animationID)
         }
     }, [videoLoaded, videoData, reverse, speed, sharpen, lightness, 
-        pixelate, paused, seekTo, abloop, loopStart, loopEnd, audio])
+        pixelate, paused, seekTo, abloop, loopStart, loopEnd])
 
     const resizeOverlay = () => {
         const sharpenCanvas = sharpnessRef.current
@@ -586,14 +581,7 @@ const VideoPlayer: React.FunctionComponent = () => {
     const upload = useEffectEvent(async (file?: string) => {
         if (!file) file = await window.ipcRenderer.invoke("select-file")
         if (!file) return
-        if (!videoExtensions.includes(path.extname(file)) && !audioExtensions.includes(path.extname(file))) return
-        let sizeImg = file
-        if (audioExtensions.includes(path.extname(file))) {
-            sizeImg = placeholder
-            setAudio(true)
-        } else {
-            setAudio(false)
-        }
+        if (!videoExtensions.includes(path.extname(file))) return
         if (path.extname(file) === ".mov") file = await window.ipcRenderer.invoke("mov-to-mp4", file) as string
         setVideoLoaded(false)
         setSubtitlesLoaded(false)
@@ -606,7 +594,6 @@ const VideoPlayer: React.FunctionComponent = () => {
         setReverse(false)
         setPaused(false)
         refreshState()
-        window.ipcRenderer.invoke("resize-window", sizeImg)
         window.ipcRenderer.invoke("extract-subtitles", file).then((subtitles) => {
             if (subtitles) {
                 setSubtitles(true)
@@ -620,6 +607,13 @@ const VideoPlayer: React.FunctionComponent = () => {
             if (reverseSrc) setReverseSrc(reverseSrc)
         })
     })
+
+    const onLoad = async () => {
+        setVideoLoaded(true)
+        const width = videoRef.current?.videoWidth
+        const height = videoRef.current?.videoHeight
+        await window.ipcRenderer.invoke("resize-window", {width, height})
+    }
 
     const play = () => {
         if (videoRef.current!.paused) {
@@ -872,8 +866,11 @@ const VideoPlayer: React.FunctionComponent = () => {
     }
 
     const handleVideoDrag = () => {
-        if (!videoDrag) return
-        window.ipcRenderer.send("moveWindow")
+        if (videoDrag) {
+            window.ipcRenderer.send("moveWindow")
+        } else {
+            play()
+        }
     }
 
     const togglePopup = (popup: "speed" | "pitch") => {
@@ -893,12 +890,11 @@ const VideoPlayer: React.FunctionComponent = () => {
                 <div className={hoverBar ? "right-bar visible" : "right-bar"} onMouseEnter={() => setHoverBar(true)} onMouseLeave={() => setHoverBar(false)}>
                     <NextIcon className="bar-button" onClick={() => next()}/>
                 </div>
-                {audio ? <img className="audio-placeholder" src={placeholder} onMouseDown={handleVideoDrag}/> : null}
                 <div className="video-filters" ref={filterRef} onMouseDown={handleVideoDrag}>
                     <img className="video-lightness-overlay" ref={lightnessRef} src={backFrame}/>
                     <canvas className="video-sharpen-overlay" ref={sharpnessRef}></canvas>
                     <canvas className="video-pixelate-canvas" ref={pixelateRef}></canvas>
-                    <video className="video" ref={videoRef} style={audio ? {display: "none"} : {display: "flex"}} onLoadedMetadata={() => setVideoLoaded(true)}>
+                    <video className="video" ref={videoRef} onLoadedMetadata={onLoad}>
                         <track kind="subtitles" src={subtitleSrc ?? ""}></track>
                     </video>
                 </div>

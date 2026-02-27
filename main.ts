@@ -70,15 +70,7 @@ ipcMain.handle("app:getPath", (event, path: string) => {
   return app.getPath(path as any)
 })
 
-const parseResolution = async (file: string, ffmpegPath?: string) => {
-  let command = `"${ffmpegPath ? ffmpegPath : "ffmpeg"}" -i "${functions.escapeQuotes(file)}"`
-  const str = await exec(command).then((s: any) => s.stdout).catch((e: any) => e.stderr)
-  const dim = str.match(/(?<= )\d+x\d+(?= |,)/)[0].split("x")
-  return {width: Number(dim[0]), height: Number(dim[1])}
-}
-
-ipcMain.handle("resize-window", async (event, videoFile: string) => {
-  const dim = await parseResolution(videoFile, ffmpegPath)
+ipcMain.handle("resize-window", async (event, dim: {width: number, height: number}) => {
   const {width, height} = functions.constrainDimensions(dim.width, dim.height)
   window?.setAspectRatio(width / height)
   window?.setSize(width, height, true)
@@ -303,8 +295,7 @@ ipcMain.handle("select-file", async () => {
   const files = await dialog.showOpenDialog(window, {
     filters: [
       {name: "All Files", extensions: ["*"]},
-      {name: "Video", extensions: ["mp4", "webm", "mkv", "mov", "avi", "m4v"]},
-      {name: "Audio", extensions: ["mp3", "wav", "ogg"]}
+      {name: "Video", extensions: ["mp4", "webm", "mkv", "mov", "avi", "m4v"]}
     ],
     properties: ["openFile"]
   })
