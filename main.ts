@@ -616,6 +616,7 @@ if (!singleLock) {
     window.removeMenu()
     openFile()
     if (ffmpegPath && process.platform === "darwin") fs.chmodSync(ffmpegPath, "777")
+    if (ffprobePath && process.platform === "darwin") fs.chmodSync(ffprobePath, "777")
     localShortcut.register(window, "Control+Shift+I", () => {
       window?.webContents.openDevTools()
     })
