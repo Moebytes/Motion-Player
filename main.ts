@@ -2,18 +2,15 @@ import {app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog, ipcMain, s
 import localShortcut from "electron-localshortcut"
 import Store from "electron-store"
 import dragAddon from "electron-click-drag-plugin"
-import util from "util"
-import child_process from "child_process"
 import path from "path"
 import ffmpeg from "fluent-ffmpeg"
 import process from "process"
 import fs from "fs"
-import functions from "./structures/functions"
+import functions, {VideoTrack, VideoChapter} from "./structures/functions"
 import mainFunctions from "./structures/mainFunctions"
 import Youtube from "youtube.ts"
 import pack from "./package.json"
 
-const exec = util.promisify(child_process.exec)
 process.setMaxListeners(0)
 let window: Electron.BrowserWindow | null
 
@@ -24,6 +21,13 @@ if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../.
 if (process.env.DEVELOPMENT === "true") ffmpegPath = "./ffmpeg/ffmpeg.app"
 if (!fs.existsSync(ffmpegPath)) ffmpegPath = undefined
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
+
+let ffprobePath = undefined as any
+if (process.platform === "darwin") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe.app")
+if (process.platform === "win32") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe.exe")
+if (process.platform === "linux") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe")
+if (process.env.DEVELOPMENT === "true") ffprobePath = "./ffmpeg/ffprobe.app"
+if (!fs.existsSync(ffprobePath)) ffprobePath = undefined
 
 let ytdlPath = undefined as any
 if (process.platform === "darwin") ytdlPath = path.join(app.getAppPath(), "../../ytdl/yt-dlp.app")
@@ -36,6 +40,10 @@ const store = new Store()
 let initialTransparent = process.platform === "win32" ? store.get("transparent", false) as boolean : true
 const youtube = new Youtube()
 let filePath = ""
+
+let chapters = [] as VideoChapter[]
+let audioTracks = [] as VideoTrack[]
+let subtitleTracks = [] as VideoTrack[]
 
 ipcMain.handle("close", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -103,8 +111,9 @@ ipcMain.handle("read-buffer", async (event, file: string) => {
 })
 
 const containsAudio = async (file: string, ffmpegPath?: string) => {
-  let command = `"${ffmpegPath ? ffmpegPath : "ffmpeg"}" -i "${functions.escapeQuotes(file)}"`
-  const str = await exec(command).then((s: any) => s.stdout).catch((e: any) => e.stderr)
+  const str = await mainFunctions.spawn(ffmpegPath ?? "ffmpeg", ["-i", file])
+    .then((s: any) => s.stdout).catch((e: any) => e.stderr)
+
   return /Stream #.*Audio:/i.test(str)
 }
 
@@ -112,6 +121,12 @@ ipcMain.handle("export-video", async (event, videoFile: string, savePath: string
   let {reverse, speed, preservesPitch, abloop, loopStart, loopEnd, duration} = options
   if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
   const audio = await containsAudio(videoFile, ffmpegPath)
+
+  const overwrite = path.resolve(videoFile) === path.resolve(savePath)
+
+  const tempOutput = overwrite
+    ? path.join(app.getPath("documents"), `Motion Player/videos/temp_${path.basename(savePath)}`)
+    : savePath
 
   const baseFlags = ["-pix_fmt", "yuv420p", "-movflags", "+faststart"]
   let audioSpeed = preservesPitch ? `atempo=${speed}` : `asetrate=44100*${speed},aresample=44100`
@@ -136,13 +151,18 @@ ipcMain.handle("export-video", async (event, videoFile: string, savePath: string
   await new Promise<void>((resolve, reject) => {
     ffmpeg(path.normalize(videoFile).replaceAll("\\", "/"))
     .outputOptions([...baseFlags, ...segment, ...filter])
-    .save(savePath)
+    .save(tempOutput)
     .on("end", () => resolve())
     .on("error", () => reject())
     .on("progress", (progress) => {
       window?.webContents.send("export-progress", {...progress, duration})
     })
   })
+
+  if (overwrite) {
+    fs.unlinkSync(savePath)
+    fs.renameSync(tempOutput, savePath)
+  }
   shell.showItemInFolder(savePath)
 })
 
@@ -170,9 +190,14 @@ ipcMain.handle("trigger-download", async (event, link: string) => {
 ipcMain.handle("download-yt-video", async (event, url: string) => {
   const name = await youtube.util.getTitle(url)
   const savePath = path.join(app.getPath("documents"), `Motion Player/videos/${name}.mp4`)
-  let runtimes = `--js-runtimes node:"${mainFunctions.getNodePath()}" --ffmpeg-location "${ffmpegPath ?? "ffmpeg"}"`
-  let command = `"${ytdlPath ? ytdlPath : "yt-dlp"}" ${runtimes} -t mp4 "${functions.escapeQuotes(url)}" -o "${savePath}"`
-  const str = await exec(command).then((s: any) => s.stdout).catch((e: any) => e.stderr)
+
+  let args = [
+    `--js-runtimes node:"${mainFunctions.getNodePath()}"`, `--ffmpeg-location "${ffmpegPath ?? "ffmpeg"}"`,
+    "-t", "mp4", url, "-o", savePath
+  ]
+  const str = await mainFunctions.spawn(ytdlPath ?? "yt-dlp", args)
+    .then((s: any) => s.stdout).catch((e: any) => e.stderr)
+
   window?.webContents.send("debug", str)
   return savePath
 })
@@ -241,20 +266,108 @@ ipcMain.handle("upload-file", () => {
   window?.webContents.send("upload-file")
 })
 
-ipcMain.handle("extract-subtitles", async (event, videoFile) => {
+ipcMain.handle("get-tracks", async (event, videoFile: string) => {
+  if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
+  let args = ["-v", "error", "-print_format", "json", "-show_streams", "-show_chapters", videoFile]
+
+  const str = await mainFunctions.spawn(ffprobePath ?? "ffprobe", args).then((s: any) => s.stdout).catch((e: any) => e.stderr)
+  const json = JSON.parse(str)
+
+  let tracks = [] as VideoTrack[]
+  chapters = []
+  audioTracks = []
+  subtitleTracks = []
+  let subtitleCount = 0
+  let audioCount = 0
+  let videoCount = 0
+
+  for (const stream of json.streams) {
+    if (!["video", "audio", "subtitle"].includes(stream.codec_type)) continue
+
+    let relativeIndex = 0
+
+    if (stream.codec_type === "video") {
+      relativeIndex = videoCount++
+    }
+
+    if (stream.codec_type === "audio") {
+      relativeIndex = audioCount++
+    }
+
+    if (stream.codec_type === "subtitle") {
+      relativeIndex = subtitleCount++
+    }
+
+    let track = {
+      index: relativeIndex,
+      type: stream.codec_type,
+      codec: stream.codec_name,
+      language: stream.tags?.language,
+      title: stream.tags?.title
+    } as VideoTrack
+
+    tracks.push(track)
+    if (stream.codec_type === "audio") audioTracks.push(track)
+    if (stream.codec_type === "subtitle") subtitleTracks.push(track)
+  }
+
+  for (const chapter of json.chapters ?? []) {
+    chapters.push({
+      id: chapter.id,
+      start: Number(chapter.start_time),
+      end: Number(chapter.end_time),
+      title: chapter.tags?.title ?? `Chapter ${chapter.id + 1}`
+    })
+  }
+
+  applicationMenu()
+
+  return {tracks, chapters}
+})
+
+ipcMain.handle("extract-subtitle-track", async (event, videoFile: string, streamIndex: number) => {
     if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
     const name = path.basename(videoFile, path.extname(videoFile))
+
     const vidDest = path.join(app.getPath("documents"), `Motion Player/subtitles`)
     if (!fs.existsSync(vidDest)) fs.mkdirSync(vidDest, {recursive: true})
-    const newDest = path.join(vidDest, `./${name}.vtt`)
+
+    const newDest = path.join(vidDest, `./${name}_${streamIndex}.vtt`)
+    if (fs.existsSync(newDest)) return newDest
+
     return new Promise<string>((resolve, reject) => {
         ffmpeg(path.normalize(videoFile).replaceAll("\\", "/"))
+        .outputOptions([
+          "-map", `0:s:${streamIndex}`,
+          "-c:s", "webvtt"
+        ])
         .save(newDest)
-        .on("end", () => {
-            resolve(newDest)
-        })
-        .on("error", () => reject())
-    }).catch(() => "")
+        .on("end", () => resolve(newDest))
+        .on("error", (err) => reject(err))
+    }).catch((err) => console.log(err))
+})
+
+ipcMain.handle("extract-audio-track", async (event, videoFile: string, streamIndex: number) => {
+  if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
+  const name = path.basename(videoFile, path.extname(videoFile))
+
+  const vidDest = path.join(app.getPath("documents"), `Motion Player/audio`)
+  if (!fs.existsSync(vidDest)) fs.mkdirSync(vidDest, {recursive: true})
+
+  const newDest = path.join(vidDest, `${name}_${streamIndex}${path.extname(videoFile)}`)
+  if (fs.existsSync(newDest)) return newDest
+
+  return new Promise<string>((resolve, reject) => {
+      ffmpeg(path.normalize(videoFile).replaceAll("\\", "/"))
+      .outputOptions([
+        "-map", "0:v:0",
+        "-map", `0:a:${streamIndex}`,
+        "-c", "copy"
+      ])
+      .save(newDest)
+      .on("end", () => resolve(newDest))
+      .on("error", (err) => reject(err))
+    }).catch((err) => console.log(err))
 })
 
 ipcMain.handle("get-reverse-src", async (event, videoFile: string) => {
@@ -370,12 +483,12 @@ ipcMain.handle("context-menu", (event, {hasSelection}) => {
     {label: "Paste", role: "paste"},
     {type: "separator"},
     {label: "Lock Aspect Ratio", click: () => event.sender.send("trigger-resize")},
-    {label: "Unlock Aspect Ratio", click: () => window.setAspectRatio(0)},
+    {label: "Unlock Aspect Ratio", click: () => window?.setAspectRatio(0)},
     {type: "separator"},
     {label: "Copy Loop", click: () => event.sender.send("copy-loop")},
     {label: "Paste Loop", click: () => event.sender.send("paste-loop")},
     {type: "separator"},
-    {label: "Clear Cache", click: () => {
+    {label: "Clear Video Cache", click: () => {
       const videoPath = path.join(app.getPath("documents"), `Motion Player/videos`)
       const subtitlePath = path.join(app.getPath("documents"), `Motion Player/subtitles`)
       const audioPath = path.join(app.getPath("documents"), `Motion Player/audio`)
@@ -392,27 +505,53 @@ ipcMain.handle("context-menu", (event, {hasSelection}) => {
 })
 
 const applicationMenu = () =>  {
+  const chapterSubmenu: MenuItemConstructorOptions[] =
+    chapters.length === 0
+      ? [{label: "No Chapters", enabled: false}]
+      : chapters.map((chapter) => ({
+          label: chapter.title,
+          click: () => {
+            window?.webContents.send("select-chapter", chapter)
+          }
+        }))
+
+  const audioSubmenu: MenuItemConstructorOptions[] =
+    audioTracks.length === 0
+      ? [{label: "No Audio Tracks", enabled: false}]
+      : audioTracks.map((track) => ({
+          label: `${functions.getLanguageName(track.language)}`,
+          type: "radio",
+          click: () => {
+            window?.webContents.send("select-audio-track", track)
+          }
+        }))
+
+  const subtitleSubmenu: MenuItemConstructorOptions[] =
+    subtitleTracks.length === 0
+      ? [{ label: "No Subtitle Tracks", enabled: false }]
+      : subtitleTracks.map((track) => ({
+          label: `${functions.getLanguageName(track.language)}`,
+          type: "radio",
+          click: () => {
+            window?.webContents.send("select-subtitle-track", track)
+          }
+        }))
+
   const template: MenuItemConstructorOptions[] = [
     {role: "appMenu"},
     {
       label: "File",
       submenu: [
-        {
-          label: "Open", 
-          accelerator: "CmdOrCtrl+O",
+        {label: "Open", accelerator: "CmdOrCtrl+O",
           click: (item, window) => {
             const win = window as BrowserWindow
             win.webContents.send("upload-file")
-          }
-        },
-        {
-          label: "Save",
-          accelerator: "CmdOrCtrl+S",
+        }},
+        {label: "Save", accelerator: "CmdOrCtrl+S",
           click: (item, window) => {
             const win = window as BrowserWindow
             win?.webContents.send("trigger-download")
-          }
-        }
+        }}
       ]
     },
     {
@@ -425,22 +564,21 @@ const applicationMenu = () =>  {
     {
       label: "View",
       submenu: [
-        {
-          label: "Lock Aspect Ratio",
+        {label: "Lock Aspect Ratio",
           click: (item, window) => {
             const win = window as BrowserWindow
             win?.webContents.send("trigger-resize")
-          }
-        },
-        {
-          label: "Unlock Aspect Ratio",
+        }},
+        {label: "Unlock Aspect Ratio",
           click: (item, window) => {
             const win = window as BrowserWindow
             win.setAspectRatio(0)
-          }
-        }
+        }}
       ]
     },
+    {label: "Chapter", submenu: chapterSubmenu},
+    {label: "Audio", submenu: audioSubmenu},
+    {label: "Subtitles", submenu: subtitleSubmenu},
     {role: "windowMenu"},
     {
       role: "help",

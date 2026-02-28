@@ -35,6 +35,9 @@
 	--playerColor: #c8baff4d;
 	--background: #ffffff;
     --activeColor: #57abff;
+    --hoverColor: #ffffff;
+    --dropdownHover: #ff89ce;
+	--dropdownColor: #ab8fff;
 }
 
 .dark {
@@ -48,6 +51,7 @@
 	--navColor: #0f0929;
 	--playerColor: #0f09294d;
 	--background: #000000;
+	--dropdownColor: #231954;
 }
 
 * {
@@ -126,4 +130,63 @@ img {
 
 ul {
     list-style-type: none;
+}
+
+.btn {
+    color: var(--textColor);
+    font-size: 17px;
+    font-family: "GenEi M Gothic v2", sans-serif;
+    padding: 4px 8px;
+    background-color: var(--dropdownColor);
+    cursor: default !important;
+    border-color: transparent;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.btn-primary:hover {
+    color: var(--hoverColor) !important;
+    border-color: transparent !important;
+    background-color: var(--dropdownColor) !important;
+    box-shadow: none !important;
+}
+
+.dropdown-toggle {
+    color: var(--textColor) !important;
+    border-color: transparent !important;
+    background-color: var(--dropdownColor) !important;
+    &:hover {
+        color: var(--hoverColor) !important;
+    }
+    &::after {
+        content: none !important; 
+    }
+}
+
+.dropdown-menu {
+    background-color: var(--dropdownColor);
+    min-width: 0;
+    padding: 6px 0;
+    border: none;
+    z-index: 2100 !important;
+}
+
+.dropdown-item {
+    color: var(--textColor);
+    cursor: default !important;
+    font-size: 15px;
+    font-family: "GenEi M Gothic v2", sans-serif;
+    padding: 6px 10px;
+    &:hover {
+        background-color: var(--dropdownHover);
+    }
+}
+
+.dropdown-item.active {
+    background-color: var(--dropdownHover);
+    color: var(--textColor);
+}
+
+.dropdown-item.active:hover {
+    background-color: var(--dropdownHover);
 }

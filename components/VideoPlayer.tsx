@@ -1,7 +1,8 @@
 import React, {useEffect, useEffectEvent, useRef, useState} from "react"
 import {useActiveSelector, useFilterSelector, usePlaybackSelector, usePlaybackActions} from "../store"
 import Slider from "react-slider"
-import functions, {CanvasDrawable} from "../structures/functions"
+import {Dropdown, DropdownButton} from "react-bootstrap"
+import functions, {VideoTrack, VideoChapter, CanvasDrawable} from "../structures/functions"
 import CheckboxIcon from "../assets/svg/checkbox.svg"
 import CheckboxCheckedIcon from "../assets/svg/checkbox-checked.svg"
 import PlayIcon from "../assets/svg/play.svg"
@@ -14,6 +15,8 @@ import LoopIcon from "../assets/svg/loop.svg"
 import ABLoopIcon from "../assets/svg/abloop.svg"
 import ResetIcon from "../assets/svg/revert.svg"
 import SubIcon from "../assets/svg/sub.svg"
+import AudioIcon from "../assets/svg/aud.svg"
+import ChapterIcon from "../assets/svg/chapter.svg"
 import FullscreenIcon from "../assets/svg/fullscreen.svg"
 import VolumeIcon from "../assets/svg/volume.svg"
 import VolumeLowIcon from "../assets/svg/volume-low.svg"
@@ -30,15 +33,16 @@ let videoID = 0
 let animationID = 0
 let lastTime = 0
 let acc = 0
+let changedAudio = false
 
 const VideoPlayer: React.FunctionComponent = () => {
-    const {forwardSrc, reverseSrc, subtitleSrc, reverse, speed, preservesPitch,
+    const {originalSrc, forwardSrc, reverseSrc, subtitleSrc, reverse, speed, preservesPitch,
         duration, prevVolume, volume, paused, subtitles, loop, abloop, loopStart,
         loopEnd, savedLoop, progress, secondsProgress, seekTo, abDragging,
         dragging, dragProgress, stepFlag, subtitleColor, outlineThickness, outlineColor,
         subtitleSize
     } = usePlaybackSelector()
-    const {setForwardSrc, setReverseSrc, setSubtitleSrc, setReverse, setSpeed, setPreservesPitch,
+    const {setOriginalSrc, setForwardSrc, setReverseSrc, setSubtitleSrc, setReverse, setSpeed, setPreservesPitch,
         setDuration, setPrevVolume, setVolume, setPaused, setSubtitles, setLoop, setABLoop, setLoopStart,
         setLoopEnd, setSavedLoop, setProgress, setSecondsProgress, setSeekTo, setDragging, setDragProgress,
         setABDragging, setStepFlag, setSubtitleColor, setOutlineThickness, setOutlineColor, setSubtitleSize
@@ -47,6 +51,8 @@ const VideoPlayer: React.FunctionComponent = () => {
     const {videoDrag} = useActiveSelector()
     const [showSpeedPopup, setShowSpeedPopup] = useState(false)
     const [showSubtitlePopup, setShowSubtitlePopup] = useState(false)
+    const [showAudioPopup, setShowAudioPopup] = useState(false)
+    const [showChapterPopup, setShowChapterPopup] = useState(false)
     const [hover, setHover] = useState(false)
     const [hoverBar, setHoverBar] = useState(false)
     const [backFrame, setBackFrame] = useState("")
@@ -55,13 +61,26 @@ const VideoPlayer: React.FunctionComponent = () => {
     const [subtitlesLoaded, setSubtitlesLoaded] = useState(false)
     const [subtitleText, setSubtitleText] = useState("")
     const [processing, setProcessing] = useState(false)
+    const [videoTracks, setVideoTracks] = useState([] as VideoTrack[])
+    const [audioTracks, setAudioTracks] = useState([] as VideoTrack[])
+    const [subtitleTracks, setSubtitleTracks] = useState([] as VideoTrack[])
+    const [chapters, setChapters] = useState([] as VideoChapter[])
+    const [currentVideoTrack, setCurrentVideoTrack] = useState(null as VideoTrack | null)
+    const [currentAudioTrack, setCurrentAudioTrack] = useState(null as VideoTrack | null)
+    const [currentSubtitleTrack, setCurrentSubtitleTrack] = useState(null as VideoTrack | null)
+    const [currentChapter, setCurrentChapter] = useState(null as VideoChapter | null)
 
     const playerRef = useRef<HTMLDivElement>(null)
     const videoRef = useRef<HTMLVideoElement>(null)
+    const trackRef = useRef<HTMLTrackElement>(null)
     const speedPopup = useRef<HTMLDivElement>(null)
     const speedIcon = useRef<HTMLDivElement>(null)
     const subtitlePopup = useRef<HTMLDivElement>(null)
     const subtitleIcon = useRef<HTMLDivElement>(null)
+    const audioPopup = useRef<HTMLDivElement>(null)
+    const audioIcon = useRef<HTMLDivElement>(null)
+    const chapterPopup = useRef<HTMLDivElement>(null)
+    const chapterIcon = useRef<HTMLDivElement>(null)
     const filterRef = useRef<HTMLDivElement>(null)
     const lightnessRef = useRef<HTMLImageElement>(null)
     const sharpnessRef = useRef<HTMLCanvasElement>(null)
@@ -108,6 +127,15 @@ const VideoPlayer: React.FunctionComponent = () => {
             setDragging(false)
             setABDragging(false)
         }
+        const selectChapter = (event: any, chapter: VideoChapter) => {
+            goToChapter(chapter)
+        }
+        const selectAudioTrack = (event: any, track: VideoTrack) => {
+            changeAudioTrack(track)
+        }
+        const selectSubtitleTrack = (event: any, track: VideoTrack) => {
+            changeSubtitleTrack(track)
+        }
         initState()
         abSlider.current.slider.style.display = "none"
         window.addEventListener("mouseup", onWindowMouseUp)
@@ -117,6 +145,9 @@ const VideoPlayer: React.FunctionComponent = () => {
         window.ipcRenderer.on("trigger-download", triggerDownload)
         window.ipcRenderer.on("trigger-resize", triggerResize)
         window.ipcRenderer.on("cache-cleared", cacheCleared)
+        window.ipcRenderer.on("select-chapter", selectChapter)
+        window.ipcRenderer.on("select-audio-track", selectAudioTrack)
+        window.ipcRenderer.on("select-subtitle-track", selectSubtitleTrack)
         return () => {
             window.removeEventListener("mouseup", onWindowMouseUp)
             window.ipcRenderer.removeListener("open-file", openFile)
@@ -125,6 +156,9 @@ const VideoPlayer: React.FunctionComponent = () => {
             window.ipcRenderer.removeListener("trigger-download", triggerDownload)
             window.ipcRenderer.removeListener("trigger-resize", triggerResize)
             window.ipcRenderer.removeListener("cache-cleared", cacheCleared)
+            window.ipcRenderer.removeListener("select-chapter", selectChapter)
+            window.ipcRenderer.removeListener("select-audio-track", selectAudioTrack)
+            window.ipcRenderer.removeListener("select-subtitle-track", selectSubtitleTrack)
         }
     }, [])
 
@@ -146,13 +180,23 @@ const VideoPlayer: React.FunctionComponent = () => {
                 && !subtitlePopup.current?.contains(target)) {
                 setShowSubtitlePopup(false)
             }
+
+            if (showAudioPopup && !audioIcon.current?.contains(target)
+                && !audioPopup.current?.contains(target)) {
+                setShowAudioPopup(false)
+            }
+
+            if (showChapterPopup && !chapterIcon.current?.contains(target)
+                && !chapterPopup.current?.contains(target)) {
+                setShowChapterPopup(false)
+            }
         }
 
         window.addEventListener("mousedown", onWindowClick)
         return () => {
             window.removeEventListener("mousedown", onWindowClick)
         }
-    }, [showSpeedPopup, showSubtitlePopup])
+    }, [showSpeedPopup, showSubtitlePopup, showAudioPopup, showChapterPopup])
 
     const initState = async () => {
         const saved = await window.ipcRenderer.invoke("get-state")
@@ -337,22 +381,22 @@ const VideoPlayer: React.FunctionComponent = () => {
 
     useEffect(() => {
         const getThumbnail = async () => {
-            if (backFrame || !forwardSrc) return 
-            const thumb = await functions.videoThumbnail(forwardSrc)
+            if (backFrame || !originalSrc) return 
+            const thumb = await functions.videoThumbnail(originalSrc)
             setBackFrame(thumb)
         }
         if (videoLoaded) getThumbnail()
-    }, [videoLoaded, backFrame, forwardSrc])
+    }, [videoLoaded, backFrame, originalSrc])
 
     const getFrameData = async () => {
         let frames = [] as ImageBitmap[]
-        if (functions.isMP4(forwardSrc)) {
+        if (functions.isMP4(originalSrc)) {
             if (videoData) return
-            frames = await functions.extractMP4Frames(forwardSrc!)
+            frames = await functions.extractMP4Frames(originalSrc!)
             if (frames) setVideoData(frames)
-        } else if (functions.isWebM(forwardSrc)) {
+        } else if (functions.isWebM(originalSrc)) {
             if (videoData) return
-            frames = await functions.extractWebMFrames(forwardSrc!)
+            frames = await functions.extractWebMFrames(originalSrc!)
             if (frames) setVideoData(frames)
         }
     }
@@ -568,22 +612,27 @@ const VideoPlayer: React.FunctionComponent = () => {
     }, [])
 
     useEffect(() => {
-        if (!subtitlesLoaded) return
-        setTimeout(() => {
-            const track = videoRef.current?.textTracks[0]
+        if (!subtitlesLoaded && !trackRef.current) return
+
+        const onLoad = () => {
+            const track = trackRef.current?.track
             if (!track || !track.cues?.length) return
             track.mode = "hidden"
             for (let i = 0; i < track.cues?.length; i++) {
-                const cue = track.cues[i]
+                const cue = track.cues[i] as VTTCue
                 cue.onenter = () => {
-                    // @ts-ignore
                     setSubtitleText(functions.cleanHTML(cue.text))
                 }
                 cue.onexit = () => {
                     setSubtitleText("")
                 }
             }
-        }, 1000)
+        }
+
+        trackRef.current?.addEventListener("load", onLoad)
+        return () => {
+            trackRef.current?.removeEventListener("load", onLoad)
+        }
     }, [subtitlesLoaded])
 
     useEffect(() => {
@@ -624,13 +673,15 @@ const VideoPlayer: React.FunctionComponent = () => {
         videoRef.current!.src = file
         videoRef.current!.currentTime = 0
         videoRef.current!.play()
+        setOriginalSrc(file)
         setForwardSrc(file)
         setVideoData(null)
         setReverseSrc(null)
         setReverse(false)
+        setSubtitleText("")
         setPaused(false)
         refreshState()
-        window.ipcRenderer.invoke("extract-subtitles", file).then((subtitles) => {
+        window.ipcRenderer.invoke("extract-subtitle-track", file, 0).then((subtitles) => {
             if (subtitles) {
                 setSubtitles(true)
                 setSubtitleSrc(subtitles)
@@ -644,11 +695,34 @@ const VideoPlayer: React.FunctionComponent = () => {
         })
     })
 
-    const onLoad = async () => {
+    const onLoaded = async () => {
         setVideoLoaded(true)
+
+        if (changedAudio) {
+            changedAudio = false
+            return
+        }
+
         const width = videoRef.current?.videoWidth
         const height = videoRef.current?.videoHeight
         await window.ipcRenderer.invoke("resize-window", {width, height})
+
+        const {tracks, chapters} = await window.ipcRenderer.invoke("get-tracks", originalSrc) as 
+            {tracks: VideoTrack[], chapters: VideoChapter[]}
+
+        const videoTracks = tracks.filter((t) => t.type === "video")
+        const audioTracks = tracks.filter((t) => t.type === "audio")
+        const subtitleTracks = tracks.filter((t) => t.type === "subtitle")
+
+        setVideoTracks(videoTracks)
+        setAudioTracks(audioTracks)
+        setSubtitleTracks(subtitleTracks)
+        setChapters(chapters.filter((c) => c.title))
+
+        if (videoTracks.length) setCurrentVideoTrack(videoTracks[0])
+        if (audioTracks.length) setCurrentAudioTrack(audioTracks[0])
+        if (subtitleTracks.length) setCurrentSubtitleTrack(subtitleTracks[0])
+        if (chapters.length) setCurrentChapter(chapters[0])
     }
 
     const play = () => {
@@ -669,7 +743,8 @@ const VideoPlayer: React.FunctionComponent = () => {
             await getFrameData()
         }
         if (!reverseSource) {
-            const reversed = await window.ipcRenderer.invoke("reverse-audio", forwardSrc)
+            const reversed = await window.ipcRenderer.invoke("reverse-audio", forwardSrc).catch(() => null)
+            if (!reversed) return setProcessing(false)
             setReverseSrc(reversed)
             reverseSource = reversed
         }
@@ -826,27 +901,28 @@ const VideoPlayer: React.FunctionComponent = () => {
     }
 
     const next = async () => {
-        const nextFile = await window.ipcRenderer.invoke("next", forwardSrc)
+        const nextFile = await window.ipcRenderer.invoke("next", originalSrc)
         if (nextFile) upload(nextFile)
     }
 
     const previous = async () => {
-        const previousFile = await window.ipcRenderer.invoke("previous", forwardSrc)
+        const previousFile = await window.ipcRenderer.invoke("previous", originalSrc)
         if (previousFile) upload(previousFile)
     }
     
     const getName = () => {
-        return forwardSrc ? path.basename(forwardSrc.replace("file:///", ""), 
-            path.extname(forwardSrc.replace("file:///", ""))) : ""
+        return originalSrc ? path.basename(originalSrc.replace("file:///", ""), 
+            path.extname(originalSrc.replace("file:///", ""))) : ""
     }
 
     const download = useEffectEvent(async () => {
-        let defaultPath = forwardSrc ?? ""
+        let defaultPath = originalSrc ?? ""
         if (defaultPath.startsWith("http")) {
             let name = path.basename(defaultPath)
             const downloadsFolder = await window.app.getPath("downloads")
             defaultPath = `${downloadsFolder}/${name}`
         }
+        if (!defaultPath) return
         let savePath = await window.ipcRenderer.invoke("save-dialog", defaultPath)
         if (!savePath) return
         if (!path.extname(savePath)) savePath += path.extname(defaultPath)
@@ -890,6 +966,53 @@ const VideoPlayer: React.FunctionComponent = () => {
         }
     }
 
+    const goToChapter = useEffectEvent((chapter: VideoChapter) => {
+        setCurrentChapter(chapter)
+        videoRef.current!.currentTime = chapter.start
+        setProgress(chapter.start)
+        setSeekTo(chapter.start)
+    })
+
+    const changeSubtitleTrack = useEffectEvent(async (track: VideoTrack) => {
+        if (!originalSrc || processing) return
+        setProcessing(true)
+        setCurrentSubtitleTrack(track)
+
+        const subtitlePath = await window.ipcRenderer.invoke("extract-subtitle-track", originalSrc, track.index).catch(() => null)
+        if (!subtitlePath) return setProcessing(false)
+
+        setSubtitles(true)
+        setSubtitleSrc(subtitlePath)
+        setSubtitlesLoaded(true)
+
+        setProcessing(false)
+    })
+
+    const changeAudioTrack = useEffectEvent(async (track: VideoTrack) => {
+        if (!originalSrc || processing) return
+        setProcessing(true)
+        setCurrentAudioTrack(track)
+
+        const pauseState = videoRef.current!.paused
+
+        const newSrc = track.index === 0 ? originalSrc :
+            await window.ipcRenderer.invoke("extract-audio-track", originalSrc, track.index).catch(() => null)
+        if (!newSrc) return setProcessing(false)
+
+        changedAudio = true
+        setVideoLoaded(false)
+        setForwardSrc(newSrc)
+        setReverseSrc(null)
+        setReverse(false)
+
+        const currentTime = videoRef.current!.currentTime
+        videoRef.current!.src = newSrc
+        videoRef.current!.currentTime = currentTime
+
+        if (!pauseState) videoRef.current!.play()
+        setProcessing(false)
+    })
+
     const onDrop = (files: any) => {
         files = files.map((f: any) => f.path)
         if (files[0]) {
@@ -905,13 +1028,27 @@ const VideoPlayer: React.FunctionComponent = () => {
         }
     }
 
-    const togglePopup = (popup: "speed" | "subtitle") => {
+    const togglePopup = (popup: "speed" | "subtitle" | "audio" | "chapter") => {
         if (popup === "speed") {
             setShowSubtitlePopup(false)
+            setShowAudioPopup(false)
+            setShowChapterPopup(false)
             setShowSpeedPopup((prev) => !prev)
         } else if (popup === "subtitle") {
             setShowSpeedPopup(false)
+            setShowAudioPopup(false)
+            setShowChapterPopup(false)
             setShowSubtitlePopup((prev) => !prev)
+        } else if (popup === "audio") {
+            setShowSpeedPopup(false)
+            setShowSubtitlePopup(false)
+            setShowChapterPopup(false)
+            setShowAudioPopup((prev) => !prev)
+        } else if (popup === "chapter") {
+            setShowSpeedPopup(false)
+            setShowSubtitlePopup(false)
+            setShowAudioPopup(false)
+            setShowChapterPopup((prev) => !prev)
         }
     }
 
@@ -934,8 +1071,8 @@ const VideoPlayer: React.FunctionComponent = () => {
                     <img className="video-lightness-overlay" ref={lightnessRef} src={backFrame}/>
                     <canvas className="video-sharpen-overlay" ref={sharpnessRef}></canvas>
                     <canvas className="video-pixelate-canvas" ref={pixelateRef}></canvas>
-                    <video className="video" ref={videoRef} onLoadedMetadata={onLoad}>
-                        <track kind="subtitles" src={subtitleSrc ?? ""}></track>
+                    <video className="video" ref={videoRef} onLoadedMetadata={onLoaded}>
+                        <track ref={trackRef} kind="subtitles" src={subtitleSrc ?? ""}></track>
                     </video>
                 </div>
                 <div className={paused && hover ? "control-title-container visible" : "control-title-container"}>
@@ -986,6 +1123,21 @@ const VideoPlayer: React.FunctionComponent = () => {
                         <PlayIcon className="control-button play-button" onClick={() => play()}/> :
                         <PauseIcon className="control-button play-button" onClick={() => play()}/>}
                         <FastForwardIcon className="control-button rewind-button" onClick={() => fastforward()}/>
+                        {showChapterPopup ? <div className="popup-container" ref={chapterPopup}>
+                            <div className="chapter-popup">
+                                <div className="popup-row">
+                                    <span className="popup-text">Chapter</span>
+                                </div>
+                                <div className="popup-row">
+                                    <DropdownButton title={currentChapter?.title || "None"} drop="down">
+                                        {chapters.map((item) => (
+                                            <Dropdown.Item onClick={() => goToChapter(item)}>{item.title}</Dropdown.Item>
+                                        ))}
+                                    </DropdownButton>
+                                </div>
+                            </div>
+                        </div> : null}
+                        <ChapterIcon className={`control-button ${chapters.length && "active-button"}`} ref={chapterIcon} onClick={() => togglePopup("chapter")}/>
                         {showSubtitlePopup ? <div className="popup-container" ref={subtitlePopup}>
                             <div className="subtitle-popup">
                                 <div className="popup-row">
@@ -993,6 +1145,16 @@ const VideoPlayer: React.FunctionComponent = () => {
                                     {subtitles ?
                                     <CheckboxCheckedIcon className="popup-checkbox" onClick={() => setSubtitles(!subtitles)}/> :
                                     <CheckboxIcon className="popup-checkbox" onClick={() => setSubtitles(!subtitles)}/>}
+                                </div>
+                                <div className="popup-row">
+                                    <span className="popup-text">Subtitle Track</span>
+                                </div>
+                                <div className="popup-row">
+                                    <DropdownButton title={functions.getLanguageName(currentSubtitleTrack?.language || "None")} drop="down">
+                                        {subtitleTracks.map((track) => (
+                                            <Dropdown.Item onClick={() => changeSubtitleTrack(track)}>{functions.getLanguageName(track.language)}</Dropdown.Item>
+                                        ))}
+                                    </DropdownButton>
                                 </div>
                                 <div className="popup-row">
                                     <span className="popup-text">Subtitle Color</span>
@@ -1017,6 +1179,21 @@ const VideoPlayer: React.FunctionComponent = () => {
                             </div>
                         </div> : null}
                         <SubIcon className={`control-button ${subtitles && "active-button"}`} ref={subtitleIcon} onClick={() => togglePopup("subtitle")}/>
+                        {showAudioPopup ? <div className="popup-container" ref={audioPopup}>
+                            <div className="audio-popup">
+                                <div className="popup-row">
+                                    <span className="popup-text">Audio Track</span>
+                                </div>
+                                <div className="popup-row">
+                                    <DropdownButton title={functions.getLanguageName(currentAudioTrack?.language || "None")} drop="down">
+                                        {audioTracks.map((track) => (
+                                            <Dropdown.Item onClick={() => changeAudioTrack(track)}>{functions.getLanguageName(track.language)}</Dropdown.Item>
+                                        ))}
+                                    </DropdownButton>
+                                </div>
+                            </div>
+                        </div> : null}
+                        <AudioIcon className={`control-button ${audioTracks.length > 1 && "active-button"}`} ref={audioIcon} onClick={() => togglePopup("audio")}/>
                         <FullscreenIcon className={`control-button ${document.fullscreenElement && "active-button"}`} onClick={() => fullscreen()}/>
                         {volume <= 0.01 ?
                         <VolumeMuteIcon className="control-button" onClick={() => mute()}/> :

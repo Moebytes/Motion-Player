@@ -18,11 +18,11 @@
 .export-dialog-box {
     pointer-events: all;
     margin-top: -200px;
-    width: 250px;
-    height: 75px;
+    width: 280px;
+    height: max-content;
     border-radius: 7px;
     background-color: var(--navColor);
-    padding: 10px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -35,10 +35,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
+    gap: 5px;
 }
 
 .export-dialog-text {
     color: var(--textColor);
     font-size: 20px;
     font-family: "GenEi M Gothic v2", sans-serif;
+    white-space: nowrap;
 }

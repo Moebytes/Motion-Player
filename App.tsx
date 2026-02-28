@@ -1,5 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css"
-import React, { useEffect } from "react"
+import React, {useEffect} from "react"
 import {createRoot} from "react-dom/client"
 import {Provider} from "react-redux"
 import store, {useActiveSelector, useActiveActions} from "./store"

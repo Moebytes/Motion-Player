@@ -5,6 +5,7 @@ import type {StoreState, StoreDispatch} from "../store"
 const playbackSlice = createSlice({
     name: "playback",
     initialState: {
+        originalSrc: null as string | null,
         forwardSrc: null as string | null,
         reverseSrc: null as string | null,
         subtitleSrc: null as string | null,
@@ -34,6 +35,7 @@ const playbackSlice = createSlice({
         dragProgress: 0
     },
     reducers: {
+        setOriginalSrc: (state, action) => {state.originalSrc = action.payload},
         setForwardSrc: (state, action) => {state.forwardSrc = action.payload},
         setReverseSrc: (state, action) => {state.reverseSrc = action.payload},
         setSubtitleSrc: (state, action) => {state.subtitleSrc = action.payload},
@@ -71,12 +73,13 @@ const {
     setLoopStart, setLoopEnd, setSavedLoop, setOutlineThickness,
     setProgress, setSecondsProgress, setSeekTo, setDragging,
     setDragProgress, setABDragging, setStepFlag, setSubtitleColor,
-    setOutlineColor, setSubtitleSize
+    setOutlineColor, setSubtitleSize, setOriginalSrc
 } = playbackSlice.actions
 
 export const usePlaybackSelector = () => {
     const selector = useSelector.withTypes<StoreState>()
     return {
+        originalSrc: selector((state) => state.playback.originalSrc),
         forwardSrc: selector((state) => state.playback.forwardSrc),
         reverseSrc: selector((state) => state.playback.reverseSrc),
         subtitleSrc: selector((state) => state.playback.subtitleSrc),
@@ -110,6 +113,7 @@ export const usePlaybackSelector = () => {
 export const usePlaybackActions = () => {
     const dispatch = useDispatch.withTypes<StoreDispatch>()()
     return {
+        setOriginalSrc: (state: string | null) => dispatch(setOriginalSrc(state)),
         setForwardSrc: (state: string | null) => dispatch(setForwardSrc(state)),
         setReverseSrc: (state: string | null) => dispatch(setReverseSrc(state)),
         setSubtitleSrc: (state: string | null) => dispatch(setSubtitleSrc(state)),

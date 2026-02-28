@@ -3,6 +3,21 @@ import MP4Demuxer from "./MP4Demuxer"
 // @ts-ignore
 import {JsWebm} from "jswebm"
 
+export interface VideoTrack {
+    index: number
+    type: "video" | "audio" | "subtitle"
+    codec: string
+    language?: string
+    title?: string
+}
+
+export interface VideoChapter {
+    id: number
+    start: number
+    end: number
+    title: string
+}
+
 export type CanvasDrawable =
     | HTMLCanvasElement 
     | HTMLImageElement 
@@ -278,5 +293,16 @@ export default class Functions {
         }
         const ext = file.startsWith(".") ? file : path.extname(file)
         return ext === ".webm"
+    }
+
+    public static getLanguageName = (code?: string) => {
+        if (!code) return "Unknown"
+
+        try {
+            const display = new Intl.DisplayNames(["en"], {type: "language"})
+            return display.of(code.toLowerCase()) ?? code
+        } catch {
+            return code
+        }
     }
 }

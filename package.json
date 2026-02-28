@@ -36,6 +36,7 @@
       "category": "public.app-category.video",
       "extraFiles": [
         "ffmpeg/ffmpeg.app",
+        "ffmpeg/ffprobe.app",
         "ytdl/yt-dlp.app"
       ]
     },
@@ -54,6 +55,7 @@
       },
       "extraFiles": [
         "ffmpeg/ffmpeg.exe",
+        "ffmpeg/ffprobe.exe",
         "ytdl/yt-dlp.exe"
       ]
     },
@@ -74,6 +76,7 @@
       "category": "Video",
       "extraFiles": [
         "ffmpeg/ffmpeg",
+        "ffmpeg/ffprobe",
         "ytdl/yt-dlp"
       ]
     },
