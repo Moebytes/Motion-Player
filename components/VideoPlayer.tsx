@@ -29,7 +29,7 @@ import VolumeLowIcon from "../assets/svg/volume-low.svg"
 import VolumeMuteIcon from "../assets/svg/volume-mute.svg"
 import RewindIcon from "../assets/svg/rewind.svg"
 import FastForwardIcon from "../assets/svg/fastforward.svg"
-import {useDropzone} from "react-dropzone"
+import ASS from "assjs"
 import path from "path"
 import "./styles/videoplayer.less"
 
@@ -45,7 +45,7 @@ let skipLoad = false
 const VideoPlayer: React.FunctionComponent = () => {
     const {originalSrc, forwardSrc, reverseSrc, subtitleSrc, reverse, speed, preservesPitch,
         duration, prevVolume, volume, paused, subtitles, loop, abloop, loopStart,
-        loopEnd, savedLoop, progress, secondsProgress, seekTo, abDragging,
+        loopEnd, savedLoop, progress, secondsProgress, seekTo, abDragging, originalStyle,
         dragging, dragProgress, stepFlag, subtitleColor, outlineThickness, outlineColor,
         subtitleSize, animation
     } = usePlaybackSelector()
@@ -53,7 +53,7 @@ const VideoPlayer: React.FunctionComponent = () => {
         setDuration, setPrevVolume, setVolume, setPaused, setSubtitles, setLoop, setABLoop, setLoopStart,
         setLoopEnd, setSavedLoop, setProgress, setSecondsProgress, setSeekTo, setDragging, setDragProgress,
         setABDragging, setStepFlag, setSubtitleColor, setOutlineThickness, setOutlineColor, setSubtitleSize,
-        setAnimation
+        setAnimation, setOriginalStyle
     } = usePlaybackActions()
     const {brightness, contrast, hue, saturation, lightness, blur, sharpen, pixelate} = useFilterSelector()
     const {videoDrag} = useActiveSelector()
@@ -96,6 +96,8 @@ const VideoPlayer: React.FunctionComponent = () => {
     const lightnessRef = useRef<HTMLImageElement>(null)
     const sharpnessRef = useRef<HTMLCanvasElement>(null)
     const pixelateRef = useRef<HTMLCanvasElement>(null)
+    const assRef = useRef<any>(null)
+    const assContainerRef = useRef<HTMLDivElement>(null)
     const progressBar = useRef(null) as any
     const abSlider = useRef(null) as any
     const speedBar = useRef(null) as any
@@ -252,6 +254,9 @@ const VideoPlayer: React.FunctionComponent = () => {
         }
         if (saved.outlineThickness !== undefined) {
             setOutlineThickness(Number(saved.outlineThickness))
+        }
+        if (saved.originalStyle !== undefined) {
+            setOriginalStyle(Boolean(saved.originalStyle))
         }
     }
 
@@ -686,28 +691,29 @@ const VideoPlayer: React.FunctionComponent = () => {
         new ResizeObserver(resizeOverlay).observe(element!)
     }, [])
 
+    const onSubtitleLoad = useEffectEvent(() => {
+        const track = trackRef.current?.track
+        if (!track || !track.cues?.length) return
+        track.mode = "hidden"
+        for (let i = 0; i < track.cues.length; i++) {
+            const cue = track.cues[i] as VTTCue
+            cue.onenter = () => {
+                //if (originalStyle && subtitleSrc?.endsWith(".ass")) return setSubtitleText("")
+                setSubtitleText(functions.cleanHTML(cue.text))
+            }
+            cue.onexit = () => {
+                setSubtitleText("")
+            }
+        }
+    })
+
     useEffect(() => {
         if (!subtitlesLoaded || !trackRef.current) return
 
-        const onLoad = () => {
-            const track = trackRef.current?.track
-            if (!track || !track.cues?.length) return
-            track.mode = "hidden"
-            for (let i = 0; i < track.cues.length; i++) {
-                const cue = track.cues[i] as VTTCue
-                cue.onenter = () => {
-                    setSubtitleText(functions.cleanHTML(cue.text))
-                }
-                cue.onexit = () => {
-                    setSubtitleText("")
-                }
-            }
-        }
-
-        trackRef.current.addEventListener("load", onLoad)
+        trackRef.current.addEventListener("load", onSubtitleLoad)
         return () => {
             if (!trackRef.current) return
-            trackRef.current.removeEventListener("load", onLoad)
+            trackRef.current.removeEventListener("load", onSubtitleLoad)
         }
     }, [subtitlesLoaded])
 
@@ -738,9 +744,9 @@ const VideoPlayer: React.FunctionComponent = () => {
     })
 
     useEffect(() => {
-        window.ipcRenderer.invoke("save-state", {reverse, speed, preservesPitch, loop, abloop, 
+        window.ipcRenderer.invoke("save-state", {reverse, speed, preservesPitch, loop, abloop, originalStyle,
         volume, loopStart, loopEnd, subtitleColor, subtitleSize, outlineColor, outlineThickness})
-    }, [reverse, speed, preservesPitch, loop, abloop, loopStart, volume,
+    }, [reverse, speed, preservesPitch, loop, abloop, loopStart, volume, originalStyle,
         loopEnd, subtitleColor, outlineColor, subtitleSize, outlineThickness])
 
     const upload = useEffectEvent(async (file?: string) => {
@@ -756,6 +762,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             setAnimationLoaded(false)
             setSubtitlesLoaded(false)
             setSubtitleText("")
+            setSubtitles(false)
             setOriginalSrc(file)
             setForwardSrc(file)
             setVideoData(null)
@@ -770,6 +777,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             setVideoLoaded(false)
             setSubtitlesLoaded(false)
             setSubtitleText("")
+            setSubtitles(false)
             setOriginalSrc(file)
             setForwardSrc(file)
             setVideoData(null)
@@ -822,19 +830,50 @@ const VideoPlayer: React.FunctionComponent = () => {
         if (subtitleTracks.length) setCurrentSubtitleTrack(subtitleTracks[0])
         if (chapters.length) setCurrentChapter(chapters[0])
 
-        
-        const subtitles = await window.ipcRenderer.invoke("extract-subtitle-track", originalSrc, 0, true)
-        if (subtitles) {
-            setSubtitles(true)
-            setSubtitleSrc(subtitles)
-            setSubtitlesLoaded(true)
-        } else {
-            setSubtitles(false)
-        }
-
         const reverseSrc = await window.ipcRenderer.invoke("get-reverse-src", originalSrc, 0)
         if (reverseSrc) setReverseSrc(reverseSrc)
     }
+
+    
+
+    useEffect(() => {
+        const updateASS = async () => {
+            if (!subtitleSrc || !videoRef.current || !assContainerRef.current) return
+
+            if (assRef.current) {
+                assRef.current.destroy()
+                assRef.current = null
+            }
+
+            if (originalStyle && subtitleSrc.endsWith(".ass")) {
+                setSubtitleText("")
+                const content = await fetch(subtitleSrc).then((r) => r.text())
+                assRef.current = new ASS(content, videoRef.current, {
+                    container: assContainerRef.current,
+                })
+            }
+        }
+        updateASS()
+    }, [originalStyle, subtitleSrc])
+
+    useEffect(() => {
+        const updateSubtitles = async () => {
+            if (!currentSubtitleTrack) return
+            let format = originalStyle && currentSubtitleTrack.codec === "ass" ? "ass" : "vtt"
+            
+            const subtitles = await window.ipcRenderer.invoke("extract-subtitle-track", originalSrc, 
+                currentSubtitleTrack.index, format)
+
+            if (subtitles) {
+                setSubtitles(true)
+                setSubtitleSrc(subtitles)
+                setSubtitlesLoaded(true)
+            } else {
+                setSubtitles(false)
+            }
+        }
+        updateSubtitles()
+    }, [currentSubtitleTrack, originalStyle, originalSrc])
 
     const onAnimationLoaded = async () => {
         if (!animationRef.current) return
@@ -1181,7 +1220,9 @@ const VideoPlayer: React.FunctionComponent = () => {
         setProcessing(true)
         setCurrentSubtitleTrack(track)
 
-        const subtitlePath = await window.ipcRenderer.invoke("extract-subtitle-track", originalSrc, track.index).catch(() => null)
+        let format = originalStyle && track.codec === "ass" ? "ass" : "vtt"
+
+        const subtitlePath = await window.ipcRenderer.invoke("extract-subtitle-track", originalSrc, track.index, format).catch(() => null)
         if (!subtitlePath) return setProcessing(false)
 
         setSubtitles(true)
@@ -1217,8 +1258,18 @@ const VideoPlayer: React.FunctionComponent = () => {
         setProcessing(false)
     })
 
-    const onDrop = (files: any) => {
-        files = files.map((f: any) => f.path)
+    const dragOver = (event: React.DragEvent) => {
+        event.preventDefault()
+    }
+
+    const onDrop = (event: React.DragEvent) => {
+        event.preventDefault()
+        
+        let files = [] as string[]
+        for (let i = 0; i < event.dataTransfer.files.length; i++) {
+            files.push(window.webUtils.getPathForFile(event.dataTransfer.files[i]))
+        }
+
         if (files[0]) {
             upload(files[0])
         }
@@ -1260,10 +1311,8 @@ const VideoPlayer: React.FunctionComponent = () => {
         ? 70 + subtitleSize * 0.8
         : 30 + subtitleSize * 0.3
 
-    const {getRootProps} = useDropzone({onDrop})
-
     return (
-        <main className="video-player" {...getRootProps()}>
+        <main className="video-player" onDrop={onDrop} onDragOver={dragOver}>
             <div className="video-player-container" ref={playerRef}>
                 <div className={hoverBar ? "left-bar visible" : "left-bar"} onMouseEnter={() => setHoverBar(true)} onMouseLeave={() => setHoverBar(false)}>
                     <PreviousIcon className="bar-button" onClick={() => previous()}/>
@@ -1272,6 +1321,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                     <NextIcon className="bar-button" onClick={() => next()}/>
                 </div>
                 <div className="video-filters" ref={filterRef} onMouseDown={handleVideoDrag}>
+                    <div ref={assContainerRef} className="ass-subtitles"></div>
                     <img className="video-lightness-overlay" ref={lightnessRef} src={backFrame}/>
                     <canvas className="video-sharpen-overlay" ref={sharpnessRef}></canvas>
                     <canvas className="video-pixelate-canvas" ref={pixelateRef}></canvas>
@@ -1351,6 +1401,12 @@ const VideoPlayer: React.FunctionComponent = () => {
                                     {subtitles ?
                                     <CheckboxCheckedIcon className="popup-checkbox" onClick={() => setSubtitles(!subtitles)}/> :
                                     <CheckboxIcon className="popup-checkbox" onClick={() => setSubtitles(!subtitles)}/>}
+                                </div>
+                                <div className="popup-row">
+                                    <span className="popup-text">Original Style</span>
+                                    {originalStyle ?
+                                    <CheckboxCheckedIcon className="popup-checkbox" onClick={() => setOriginalStyle(!originalStyle)}/> :
+                                    <CheckboxIcon className="popup-checkbox" onClick={() => setOriginalStyle(!originalStyle)}/>}
                                 </div>
                                 <div className="popup-row">
                                     <span className="popup-text">Subtitle Track</span>

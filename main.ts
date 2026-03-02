@@ -44,6 +44,7 @@ if (!fs.existsSync(ytdlPath)) ytdlPath = "yt-dlp"
 
 const store = new Store()
 let initialTransparent = process.platform === "win32" ? store.get("transparent", false) as boolean : true
+let windowOpacity = store.get("window-opacity", 100) as number
 const youtube = new Youtube()
 let filePath = ""
 
@@ -353,26 +354,26 @@ ipcMain.handle("get-tracks", async (event, videoFile: string) => {
   return {tracks, chapters}
 })
 
-ipcMain.handle("extract-subtitle-track", async (event, videoFile: string, streamIndex: number, ignoreError?: boolean) => {
+ipcMain.handle("extract-subtitle-track", async (event, videoFile: string, streamIndex: number, format = "vtt") => {
     if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
     const name = path.basename(videoFile, path.extname(videoFile))
 
     const vidDest = path.join(app.getPath("documents"), `Motion Player/subtitles`)
     if (!fs.existsSync(vidDest)) fs.mkdirSync(vidDest, {recursive: true})
 
-    const newDest = path.join(vidDest, `./${name}_${streamIndex}.vtt`)
+    const newDest = path.join(vidDest, `./${name}_${streamIndex}.${format}`)
     if (fs.existsSync(newDest)) return newDest
 
     return new Promise<string>((resolve, reject) => {
         ffmpeg(path.normalize(videoFile).replaceAll("\\", "/"))
         .outputOptions([
           "-map", `0:s:${streamIndex}`,
-          "-c:s", "webvtt"
+          "-c:s", format === "ass" ? "copy" : "webvtt"
         ])
         .save(newDest)
         .on("end", () => resolve(newDest))
         .on("error", (err) => reject(err))
-    }).catch((err) => ignoreError ? null : console.log(err))
+    }).catch(() => null)
 })
 
 ipcMain.handle("extract-audio-track", async (event, videoFile: string, streamIndex: number) => {
@@ -508,6 +509,26 @@ app.on("open-file", (event, file) => {
   window?.webContents.send("open-file", file)
 })
 
+const setWindowOpacity = (percent: number) => {
+  windowOpacity = Math.max(10, Math.min(100, percent))
+  store.set("window-opacity", windowOpacity)
+
+  window?.setOpacity(windowOpacity / 100)
+
+  applicationMenu()
+}
+
+const opacitySubmenu = (): MenuItemConstructorOptions[] => {
+  const values = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+
+  return values.map(value => ({
+    label: `${value}%`,
+    type: "radio",
+    checked: windowOpacity === value,
+    click: () => setWindowOpacity(value)
+  }))
+}
+
 ipcMain.handle("context-menu", (event, {hasSelection}) => {
   const template: MenuItemConstructorOptions[] = [
     {label: "Copy", enabled: hasSelection, role: "copy"},
@@ -522,6 +543,7 @@ ipcMain.handle("context-menu", (event, {hasSelection}) => {
         if (menuItem.checked) window?.setAspectRatio(0)
     }},
     {type: "separator"},
+    {label: `Opacity (${windowOpacity}%)`, submenu: opacitySubmenu()},
     {label: "Toggle Fullscreen", click: () => event.sender.send("toggle-fullscreen")},
     {type: "separator"},
     {label: "Copy Loop", click: () => event.sender.send("copy-loop")},
@@ -620,6 +642,7 @@ const applicationMenu = () =>  {
             if (menuItem.checked) window?.setAspectRatio(0)
         }},
         {type: "separator"},
+        {label: `Opacity (${windowOpacity}%)`, submenu: opacitySubmenu()},
         {label: "Toggle Fullscreen",
           click: (item, window) => {
             const win = window as BrowserWindow
@@ -665,6 +688,7 @@ if (!singleLock) {
     window.loadFile(path.join(__dirname, "../renderer/index.html"))
     applicationMenu()
     window.removeMenu()
+    window.setOpacity(windowOpacity / 100)
     openFile()
     if (ffmpegPath && process.platform === "darwin") fs.chmodSync(ffmpegPath, "777")
     if (ffprobePath && process.platform === "darwin") fs.chmodSync(ffprobePath, "777")

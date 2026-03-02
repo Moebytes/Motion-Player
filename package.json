@@ -151,6 +151,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
+    "assjs": "^0.1.5",
     "bootstrap": "^5.3.8",
     "electron-click-drag-plugin": "^2.0.2",
     "electron-localshortcut": "^3.2.1",
@@ -165,7 +166,6 @@
     "react": "^19.2.4",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.4",
-    "react-dropzone": "^15.0.0",
     "react-redux": "^9.2.0",
     "react-slider": "github:Moestash/react-slider",
     "youtube.ts": "^0.3.5"

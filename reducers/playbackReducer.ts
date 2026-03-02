@@ -27,6 +27,7 @@ const playbackSlice = createSlice({
         subtitleSize: 30,
         outlineColor: "#000000",
         outlineThickness: 2,
+        originalStyle: false,
         loop: false,
         abloop: false,
         loopStart: 0,
@@ -58,6 +59,7 @@ const playbackSlice = createSlice({
         setSubtitleSize: (state, action) => {state.subtitleSize = action.payload},
         setOutlineColor: (state, action) => {state.outlineColor = action.payload},
         setOutlineThickness: (state, action) => {state.outlineThickness = action.payload},
+        setOriginalStyle: (state, action) => {state.originalStyle = action.payload},
         setLoop: (state, action) => {state.loop = action.payload},
         setABLoop: (state, action) => {state.abloop = action.payload},
         setLoopStart: (state, action) => {state.loopStart = action.payload},
@@ -81,7 +83,8 @@ const {
     setLoopStart, setLoopEnd, setSavedLoop, setOutlineThickness,
     setProgress, setSecondsProgress, setSeekTo, setDragging,
     setDragProgress, setABDragging, setStepFlag, setSubtitleColor,
-    setOutlineColor, setSubtitleSize, setOriginalSrc, setAnimation
+    setOutlineColor, setSubtitleSize, setOriginalSrc, setAnimation,
+    setOriginalStyle
 } = playbackSlice.actions
 
 export const usePlaybackSelector = () => {
@@ -103,6 +106,7 @@ export const usePlaybackSelector = () => {
         subtitleSize: selector((state) => state.playback.subtitleSize),
         outlineColor: selector((state) => state.playback.outlineColor),
         outlineThickness: selector((state) => state.playback.outlineThickness),
+        originalStyle: selector((state) => state.playback.originalStyle),
         loop: selector((state) => state.playback.loop),
         abloop: selector((state) => state.playback.abloop),
         loopStart: selector((state) => state.playback.loopStart),
@@ -138,6 +142,7 @@ export const usePlaybackActions = () => {
         setSubtitleSize: (state: number) => dispatch(setSubtitleSize(state)),
         setOutlineColor: (state: string) => dispatch(setOutlineColor(state)),
         setOutlineThickness: (state: number) => dispatch(setOutlineThickness(state)),
+        setOriginalStyle: (state: boolean) => dispatch(setOriginalStyle(state)),
         setLoop: (state: boolean) => dispatch(setLoop(state)),
         setABLoop: (state: boolean) => dispatch(setABLoop(state)),
         setLoopStart: (state: number) => dispatch(setLoopStart(state)),

@@ -4,7 +4,7 @@
  * Licensed under CC BY-NC 4.0. See license.txt for details. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-import {contextBridge, ipcRenderer, app, IpcRendererEvent} from "electron"
+import {contextBridge, ipcRenderer, webUtils, IpcRendererEvent} from "electron"
 
 type SystemPath = "home" | "appData" | "userData" | "temp" | "exe" | "module" 
   | "desktop" | "documents" | "downloads" | "music" | "pictures" | "videos" | "recent" 
@@ -21,6 +21,9 @@ declare global {
     },
     app: {
       getPath: (location: SystemPath) => Promise<string>
+    },
+    webUtils: {
+      getPathForFile: (file: File) => string
     }
   }
 }
@@ -46,6 +49,10 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 
 contextBridge.exposeInMainWorld("app", {
     getPath: async (location: SystemPath) => ipcRenderer.invoke("app:getPath", location)
+})
+
+contextBridge.exposeInMainWorld("webUtils", {
+    getPathForFile: (file: File) => webUtils.getPathForFile(file)
 })
 
 contextBridge.exposeInMainWorld("platform", process.platform === "darwin" ? "mac" : "windows")
