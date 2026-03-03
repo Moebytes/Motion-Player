@@ -275,8 +275,6 @@ const VideoPlayer: React.FunctionComponent = () => {
         if (!videoRef.current) return
         const timeUpdate = () => {
             if (!videoRef.current) return
-            let progress = videoRef.current.currentTime / videoRef.current.playbackRate
-            let duration = videoRef.current.duration / videoRef.current.playbackRate
             if (abloop) {
                 const current = videoRef.current.currentTime
                 const start = reverse ? (videoRef.current.duration / 100) * (100 - loopStart) 
@@ -286,22 +284,12 @@ const VideoPlayer: React.FunctionComponent = () => {
                 if (reverse) {
                     if (current > start || current < end) {
                         videoRef.current.currentTime = end
-                        if (!dragging) {
-                            setProgress(end)
-                        }
                     }
                 } else {
                     if (current < start || current > end) {
                         videoRef.current.currentTime = start
-                        if (!dragging) {
-                            setProgress(start)
-                        }
                     }
                 }
-            }
-            if (!dragging) {
-                setProgress(progress)
-                setDuration(duration)
             }
         }
         if (videoRef.current.textTracks?.[0]) {
@@ -547,8 +535,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                 }
 
                 if (abloop) {
-                    const startTime = (duration / 100) * loopStart
-                    const endTime = (duration / 100) * loopEnd
+                    const {startTime, endTime} = getABBounds()
 
                     startFrame = Math.floor(startTime / interval)
                     endFrame = Math.floor(endTime / interval)
@@ -574,7 +561,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                 frame = adjustedData[pos].frame
                 currentTime = pos * interval
 
-                if (animation && !dragging) {
+                if (!dragging) {
                     setProgress(reverse ? duration - currentTime : currentTime)
                 }
             }
@@ -660,6 +647,11 @@ const VideoPlayer: React.FunctionComponent = () => {
             }
 
             const animateVideo = async () => {
+                if (!videoRef.current) return
+                if (!dragging) {
+                    setProgress(videoRef.current.currentTime)
+                    setDuration(videoRef.current.duration)
+                }
                 update()
                 draw()
                 if (paused) return
@@ -679,7 +671,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             window.cancelAnimationFrame(animationID)
         }
     }, [videoLoaded, animationLoaded, videoData, animationData, reverse, speed, sharpen, lightness, 
-        pixelate, paused, seekTo, loop, abloop, loopStart, loopEnd])
+        pixelate, paused, seekTo, loop, abloop])
 
     useEffect(() => {
         if (paused) {
@@ -687,6 +679,12 @@ const VideoPlayer: React.FunctionComponent = () => {
             acc = 0
         }
     }, [paused])
+
+    const getABBounds = useEffectEvent(() => {
+        const startTime = (duration / 100) * loopStart
+        const endTime = (duration / 100) * loopEnd
+        return {startTime, endTime}
+    })
 
     const resizeOverlay = () => {
         const sharpenCanvas = sharpnessRef.current
