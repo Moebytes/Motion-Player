@@ -159,12 +159,14 @@
 
 .ab-slider-thumb-0 {
     .ab-slider-thumb();
+    margin-right: -2px;
     content: url("../../assets/icons/a-button.png");
     background-color: transparent;
 }
 
 .ab-slider-thumb-1 {
     .ab-slider-thumb();
+    margin-left: -2px;
     content: url("../../assets/icons/b-button.png");
     background-color: transparent;
 }
@@ -227,6 +229,7 @@
     background-color: var(--iconColor);
     border-radius: 50%;
     border: none;
+    margin-left: -2px;
     height: 1rem;
     width: 1rem;
     margin-top: -5px;
@@ -265,6 +268,7 @@
     border: none;
     height: 1rem;
     width: 1rem;
+    margin-left: -2px;
     margin-top: -5px;
     &:active {
         box-shadow: none;
@@ -540,4 +544,14 @@ video::-webkit-media-text-track-container {
     position: absolute;
     inset: 0;
     pointer-events: none;
+}
+
+.react-transform-wrapper {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.react-transform-component {
+    width: 100% !important;
+    height: 100% !important;
 }

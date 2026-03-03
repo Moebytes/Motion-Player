@@ -205,8 +205,7 @@ export default class Functions {
             const ctx = canvas.getContext("2d")!
             ctx.drawImage(image, 0, 0)
             URL.revokeObjectURL(url)
-            // The delay seems to run faster than on pixiv?
-            frames.push({frame: canvas, delay: delay * 1.5})
+            frames.push({frame: canvas, delay})
             if (firstOnly) return frames
         }
         return frames
