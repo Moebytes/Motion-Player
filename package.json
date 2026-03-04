@@ -1,7 +1,7 @@
 {
   "name": "motion-player",
   "version": "1.0.0",
-  "description": "A simple video player.",
+  "description": "A cute video player!",
   "main": "dist/main/index.js",
   "scripts": {
     "start": "npm run clean && rsbuild build && electron dist/main/index.js",

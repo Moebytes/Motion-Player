@@ -2,18 +2,19 @@
 
 <img src="assets/images/readme.png">
 
-A simple video player app.
+A cute video player!
 
 ### Features:
-- Play local videos, links, and YouTube videos (MP4, MKV, MOV, AVI, WEBM, M4V)
-- Play local animations (GIF, WEBP, APNG, Ugoira)
-- Adjust the volume of the video
+- Play videos (MP4, MKV, WEBM, MOV)
+- Play animations (GIF, WEBP, APNG, Pixiv Ugoira)
 - Reversing effect
-- Time stretching (can preserve or affect the pitch)
-- Apply filters (brightness, contrast, saturation, pixelate, etc).
+- Speed adjustment (can preserve or affect the pitch)
 - Looping from point A to point B
-- Enter full-screen mode
-- Export with applied effects
+- Video filters (brightness, contrast, saturation, pixelate, etc).
+- Switch subtitle tracks and customize subtitles
+- Switch audio tracks
+- Jump to chapters
+- Export videos and gifs with applied effects
 
 ### Keyboard Shortcuts:
 - Space: Play/pause
