@@ -1182,20 +1182,39 @@ const VideoPlayer: React.FunctionComponent = () => {
 
     const renderGIF = async () => {
         let filters = {brightness, contrast, hue, saturation, lightness, blur, sharpen, pixelate}
-        if ((functions.filtersOn(filters) || functions.rateOn({speed, reverse})) && animationData) {
+        if ((abloop || functions.filtersOn(filters) || functions.rateOn({speed, reverse})) && animationData) {
             const adjustedData = functions.animationSpeed(animationData, speed)
+            const totalFrames = adjustedData.length
+            const duration = getDuration()
+            let startIndex = 0
+            let endIndex = totalFrames - 1
+
+            if (abloop) {
+                const startTime = (duration / 100) * loopStart
+                const endTime = (duration / 100) * loopEnd
+                const interval = duration / totalFrames
+
+                startIndex = Math.floor(startTime / interval)
+                endIndex = Math.floor(endTime / interval)
+                startIndex = Math.max(0, startIndex)
+                endIndex = Math.min(totalFrames - 1, endIndex)
+            }
+
+            let sliced = adjustedData.slice(startIndex, endIndex + 1)
+
+            if (reverse) sliced = sliced.reverse()
+
             let frames = [] as ArrayBuffer[]
             let delays = [] as number[]
-            for (let i = 0; i < adjustedData.length; i++) {
+
+            for (let i = 0; i < sliced.length; i++) {
                 let clientWidth = animationRef.current?.clientWidth!
                 let clientHeight = animationRef.current?.clientHeight!
-                frames.push(functions.render(adjustedData[i].frame, filters, {clientWidth, clientHeight}))
-                delays.push(adjustedData[i].delay)
+
+                frames.push(functions.render(sliced[i].frame, filters, {clientWidth, clientHeight}))
+                delays.push(sliced[i].delay)
             }
-            if (reverse) {
-                frames = frames.reverse()
-                delays = delays.reverse()
-            }
+
             return functions.encodeGIF(frames, delays, 
                 animationData[0].frame.width, animationData[0].frame.height)
         } else {
