@@ -28,7 +28,6 @@ declare global {
     path: {
       basename: (filepath: string, suffix?: string) => Promise<string>
       extname: (filepath: string) => Promise<string>
-      normalize: (filepath: string) => Promise<string>
     }
   }
 }
@@ -62,8 +61,7 @@ contextBridge.exposeInMainWorld("webUtils", {
 
 contextBridge.exposeInMainWorld("path", {
   basename: (filepath: string, suffix?: string) => ipcRenderer.invoke("path:basename", filepath, suffix),
-  extname: (filepath: string) => ipcRenderer.invoke("path:extname", filepath),
-  normalize: (filepath: string) => ipcRenderer.invoke("path:normalize", filepath)
+  extname: (filepath: string) => ipcRenderer.invoke("path:extname", filepath)
 })
 
 contextBridge.exposeInMainWorld("platform", process.platform === "darwin" ? "mac" : "windows")

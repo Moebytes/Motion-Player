@@ -93,10 +93,6 @@ ipcMain.handle("path:extname", (event, pathname: string) => {
   return path.extname(pathname)
 })
 
-ipcMain.handle("path:normalize", (event, pathname: string) => {
-  return path.normalize(pathname)
-})
-
 ipcMain.handle("resize-window", async (event, dim: {width: number, height: number}) => {
   const keepUnlocked = store.get("keep-ratio-unlocked", false)
   if (keepUnlocked) return window?.setAspectRatio(0)

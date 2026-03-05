@@ -75,7 +75,8 @@
       "capabilities": [
           "runFullTrust", 
           "internetClient",
-          "documentsLibrary"
+          "documentsLibrary",
+          "extendedExecutionBackgroundAudio"
       ]
     },
     "linux": {
