@@ -4,7 +4,6 @@
  * Licensed under CC BY-NC 4.0. See license.txt for details. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-import path from "path"
 import MP4Demuxer from "./MP4Demuxer"
 // @ts-ignore
 import {JsWebm} from "jswebm"
@@ -359,7 +358,8 @@ export default class Functions {
 
     public static getFile = async (filepath: string) => {
         const blob = await fetch(filepath).then((r) => r.blob())
-        const name = path.basename(filepath).replace(".mp3", "").replace(".wav", "").replace(".flac", "").replace(".ogg", "")
+        let name = await window.path.basename(filepath)
+        name = name.replace(".mp3", "").replace(".wav", "").replace(".flac", "").replace(".ogg", "")
         // @ts-ignore
         blob.lastModifiedDate = new Date()
         // @ts-ignore
@@ -408,7 +408,7 @@ export default class Functions {
             const ext = file.split("#")?.[1] || ""
             return ext === ".mp4"
         }
-        const ext = file.startsWith(".") ? file : path.extname(file)
+        const ext = file.startsWith(".") ? file : file.slice(-4)
         return ext === ".mp4"
     }
 
@@ -419,7 +419,7 @@ export default class Functions {
             const ext = file.split("#")?.[1] || ""
             return ext === ".webm"
         }
-        const ext = file.startsWith(".") ? file : path.extname(file)
+        const ext = file.startsWith(".") ? file : file.slice(-5)
         return ext === ".webm"
     }
     
@@ -433,7 +433,7 @@ export default class Functions {
         if (file.startsWith("data:video")) {
             return true
         }
-        const ext = file.startsWith(".") ? file : path.extname(file)
+        const ext = file.startsWith(".") ? file : `.${file.split(".").pop()}`
         return Functions.arrayIncludes(ext, videoExtensions)
     }
 
@@ -447,7 +447,7 @@ export default class Functions {
         if (file.startsWith("data:image")) {
             return true
         }
-        const ext = file.startsWith(".") ? file : path.extname(file)
+        const ext = file.startsWith(".") ? file : `.${file.split(".").pop()}`
         return Functions.arrayIncludes(ext, animationExtensions)
     }
 
@@ -476,7 +476,7 @@ export default class Functions {
             const ext = file.split("#")?.[1] || ""
             return ext === ".zip"
         }
-        const ext = file.startsWith(".") ? file : path.extname(file)
+        const ext = file.startsWith(".") ? file : file.slice(-4)
         return ext === ".zip"
     }
 

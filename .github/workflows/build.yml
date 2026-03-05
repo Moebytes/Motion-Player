@@ -78,6 +78,7 @@ jobs:
         with:
           name: ${{env.ARTIFACT_PREFIX}}-win
           path: |
+            build/${{env.APP_NAME}}-*.appx
             build/${{env.APP_NAME}}-*.exe
             build/${{env.APP_NAME}}-*.exe.blockmap
             build/latest.yml

@@ -31,7 +31,6 @@ import RewindIcon from "../assets/svg/rewind.svg"
 import FastForwardIcon from "../assets/svg/fastforward.svg"
 import {TransformWrapper, TransformComponent} from "react-zoom-pan-pinch"
 import ASS from "assjs"
-import path from "path"
 import "./styles/videoplayer.less"
 
 const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]
@@ -431,7 +430,8 @@ const VideoPlayer: React.FunctionComponent = () => {
         } else if (functions.isAnimation(originalSrc)) {
             if (animationData) return
             const buffer = await fetch(originalSrc!).then((r)=> r.arrayBuffer())
-            let format = path.extname(originalSrc!).replace(".", "").replace("apng", "png")
+            let ext = await window.path.extname(originalSrc!)
+            let format = ext.replace(".", "").replace("apng", "png")
             let frames = await functions.extractAnimationFrames(buffer, format)
             if (frames) setAnimationData(frames)
         } else if (functions.isZip(originalSrc)) {
@@ -783,8 +783,9 @@ const VideoPlayer: React.FunctionComponent = () => {
     const upload = useEffectEvent(async (file?: string) => {
         if (!file) file = await window.ipcRenderer.invoke("select-file")
         if (!file) return
-        if (videoExtensions.includes(path.extname(file))) {
-            if (path.extname(file) === ".mov") {
+        let ext = (await window.path.extname(file))
+        if (videoExtensions.includes(ext)) {
+            if (ext === ".mov") {
                 file = await window.ipcRenderer.invoke("mov-to-mp4", file).catch(() => "") as string
                 if (!file) return
             }
@@ -803,7 +804,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             setPaused(false)
             resetZoom()
         }
-        if (animationExtensions.includes(path.extname(file))) {
+        if (animationExtensions.includes(ext)) {
             setAnimation(true)
             setAnimationLoaded(false)
             setVideoLoaded(false)
@@ -1176,8 +1177,9 @@ const VideoPlayer: React.FunctionComponent = () => {
     }
     
     const getName = () => {
-        return originalSrc ? path.basename(originalSrc.replace("file:///", ""), 
-            path.extname(originalSrc.replace("file:///", ""))) : ""
+        if (!originalSrc) return ""
+        const file = originalSrc.replace("file:///", "").split("/").pop() || ""
+        return file.replace(/\.[^/.]+$/, "")
     }
 
     const renderGIF = async () => {
@@ -1225,7 +1227,7 @@ const VideoPlayer: React.FunctionComponent = () => {
     const download = useEffectEvent(async () => {
         let defaultPath = originalSrc ?? ""
         if (defaultPath.startsWith("http")) {
-            let name = path.basename(defaultPath)
+            let name = await window.path.basename(defaultPath)
             const downloadsFolder = await window.app.getPath("downloads")
             defaultPath = `${downloadsFolder}/${name}`
         }
@@ -1233,7 +1235,7 @@ const VideoPlayer: React.FunctionComponent = () => {
         if (animation) {
             let savePath = await window.ipcRenderer.invoke("save-gif-dialog", defaultPath)
             if (!savePath) return
-            if (!path.extname(savePath)) savePath += path.extname(defaultPath)
+            if (!await window.path.extname(savePath)) savePath += await window.path.extname(defaultPath)
             setPaused(true)
             await window.ipcRenderer.invoke("export-dialog", true, "gif")
             await functions.timeout(300)
@@ -1245,7 +1247,7 @@ const VideoPlayer: React.FunctionComponent = () => {
             if (!videoRef.current) return
             let savePath = await window.ipcRenderer.invoke("save-video-dialog", defaultPath)
             if (!savePath) return
-            if (!path.extname(savePath)) savePath += path.extname(defaultPath)
+            if (!await window.path.extname(savePath)) savePath += await window.path.extname(defaultPath)
             videoRef.current.pause()
             await window.ipcRenderer.invoke("export-dialog", true, "video")
             await window.ipcRenderer.invoke("export-video", forwardSrc, savePath, {reverse, speed, preservesPitch, 

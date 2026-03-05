@@ -24,6 +24,11 @@ declare global {
     },
     webUtils: {
       getPathForFile: (file: File) => string
+    },
+    path: {
+      basename: (filepath: string, suffix?: string) => Promise<string>
+      extname: (filepath: string) => Promise<string>
+      normalize: (filepath: string) => Promise<string>
     }
   }
 }
@@ -53,6 +58,12 @@ contextBridge.exposeInMainWorld("app", {
 
 contextBridge.exposeInMainWorld("webUtils", {
     getPathForFile: (file: File) => webUtils.getPathForFile(file)
+})
+
+contextBridge.exposeInMainWorld("path", {
+  basename: (filepath: string, suffix?: string) => ipcRenderer.invoke("path:basename", filepath, suffix),
+  extname: (filepath: string) => ipcRenderer.invoke("path:extname", filepath),
+  normalize: (filepath: string) => ipcRenderer.invoke("path:normalize", filepath)
 })
 
 contextBridge.exposeInMainWorld("platform", process.platform === "darwin" ? "mac" : "windows")
