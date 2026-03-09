@@ -78,7 +78,6 @@
       "capabilities": [
           "runFullTrust", 
           "internetClient",
-          "documentsLibrary",
           "extendedExecutionBackgroundAudio"
       ]
     },
