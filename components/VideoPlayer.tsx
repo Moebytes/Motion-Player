@@ -514,7 +514,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                 const logicalTime = reverse ? duration - currentTime : currentTime
                 pos = getPos(logicalTime, duration, adjustedData.length - 1)
                 pos = Math.max(0, Math.min(pos, adjustedData.length - 1))
-                frame = adjustedData[pos].frame
+                if (adjustedData[pos]) frame = adjustedData[pos].frame
             }
 
             const getDelay = () => {
@@ -558,7 +558,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                     }
                 }
 
-                frame = adjustedData[pos].frame
+                if (adjustedData[pos]) frame = adjustedData[pos].frame
                 currentTime = pos * interval
 
                 if (!dragging) {
