@@ -7,6 +7,7 @@
 import fs from "fs"
 import path from "path"
 import child_process from "child_process"
+import {dialog} from "electron"
 
 const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]
 const animationExtensions = [".gif", ".webp", ".apng", ".png", ".zip"]
@@ -42,10 +43,21 @@ export default class MainFunctions {
         })
     }
 
-    public static getSortedFiles = async (dir: string) => {
+    public static getSortedFiles = async (dir: string, window: Electron.BrowserWindow) => {
         const accepted = [...videoExtensions, ".gif", ".apng"]
 
-        const files = await fs.promises.readdir(dir)
+        let files = [] as string[]
+        try {
+            files = await fs.promises.readdir(dir)
+        } catch {
+            const result = await dialog.showOpenDialog(window, {
+                defaultPath: dir,
+                properties: ["createDirectory", "openDirectory"]
+            })
+            dir = result.filePaths[0]
+            if (!dir) return []
+            files = await fs.promises.readdir(dir)
+        }
 
         const validFiles = await Promise.all(files.map(async (fileName: string) => {
             const ext = path.extname(fileName)

@@ -479,9 +479,10 @@ ipcMain.handle("reverse-audio-track", async (event, videoFile: string, index: nu
     const audioDest = path.join(videoCacheLocation, `audio`)
     if (!fs.existsSync(audioDest)) fs.mkdirSync(audioDest, {recursive: true})
 
-    const reversedAudio = path.join(audioDest, `${name}_reverse_${index}.m4a`)
     const vidDest = path.join(audioDest, `${name}_reverse_${index}${ext}`)
     if (fs.existsSync(vidDest)) return vidDest
+    
+    const reversedAudio = path.join(audioDest, `${name}_reverse_${index}.m4a`)
 
     await new Promise<void>((resolve, reject) => {
       ffmpeg(path.normalize(videoFile).replaceAll("\\", "/"))

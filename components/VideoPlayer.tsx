@@ -276,18 +276,10 @@ const VideoPlayer: React.FunctionComponent = () => {
             if (!videoRef.current) return
             if (abloop) {
                 const current = videoRef.current.currentTime
-                const start = reverse ? (videoRef.current.duration / 100) * (100 - loopStart) 
-                    : (videoRef.current.duration / 100) * loopStart
-                const end = reverse ? (videoRef.current.duration / 100) * (100 - loopEnd) 
-                    : (videoRef.current.duration / 100) * loopEnd
-                if (reverse) {
-                    if (current > start || current < end) {
-                        videoRef.current.currentTime = end
-                    }
-                } else {
-                    if (current < start || current > end) {
-                        videoRef.current.currentTime = start
-                    }
+                const {startTime, endTime} = getABBounds()
+
+                if (current < startTime || current > endTime) {
+                    videoRef.current.currentTime = startTime
                 }
             }
         }
@@ -301,10 +293,9 @@ const VideoPlayer: React.FunctionComponent = () => {
         }
         videoRef.current.addEventListener("timeupdate", timeUpdate)
         return () => {
-            if (!videoRef.current) return
-            videoRef.current.removeEventListener("timeupdate", timeUpdate)
+            videoRef.current?.removeEventListener("timeupdate", timeUpdate)
         }
-    }, [videoLoaded, videoData, reverse, dragging, abloop, loopStart, loopEnd])
+    }, [videoLoaded, videoData, reverse, abloop])
 
     useEffect(() => {
         /* Precision on shift click */
@@ -495,7 +486,14 @@ const VideoPlayer: React.FunctionComponent = () => {
             
             let video = videoRef.current
             let animation = animationRef.current
-
+            if (animationData || videoData) {
+                pixelateCanvas.style.opacity = "1"
+                if (video) video.style.opacity = "0"
+            } else if (video) {
+                pixelateCanvas.style.opacity = "0"
+                video.style.opacity = "1"
+            }
+            
             const duration = getDuration()
             setDuration(duration)
 
@@ -511,9 +509,12 @@ const VideoPlayer: React.FunctionComponent = () => {
             let pos = 0
             if (adjustedData) {
                 fps = adjustedData.length / duration
-                const logicalTime = reverse ? duration - currentTime : currentTime
+
+                let logicalTime = reverse ? duration - currentTime : currentTime
+                if (video) logicalTime = reverse ? currentTime : duration - currentTime
                 pos = getPos(logicalTime, duration, adjustedData.length - 1)
                 pos = Math.max(0, Math.min(pos, adjustedData.length - 1))
+
                 if (adjustedData[pos]) frame = adjustedData[pos].frame
             }
 
@@ -608,19 +609,25 @@ const VideoPlayer: React.FunctionComponent = () => {
                         pixelateCtx!.drawImage(bufferCanvas, 0, 0, pixelWidth, pixelHeight,
                              0, 0, pixelateCanvas.width, pixelateCanvas.height)
                         pixelateCtx!.imageSmoothingEnabled = true
-
-                        pixelateCanvas.style.opacity = "1"
-                        if (video) video.style.opacity = "0"
-                        if (animation) animation.style.opacity = "0"
+                        if (animation && !animationData) {
+                            pixelateCanvas.style.opacity = "1"
+                            animation.style.opacity = "0"
+                        }
+                        if (video && !videoData) {
+                            pixelateCanvas.style.opacity = "1"
+                            video.style.opacity = "0"
+                        }
                         
                     } else {
                         pixelateCtx!.drawImage(frame, 0, 0, pixelateCanvas.width, pixelateCanvas.height)
-                        pixelateCanvas.style.opacity = "1"
-                        if (video) {
-                            video.style.opacity = "1"
+                        if (animation && !animationData) {
                             pixelateCanvas.style.opacity = "0"
+                            animation.style.opacity = "0"
                         }
-                        if (animation) animation.style.opacity = "0"
+                        if (video && !videoData) {
+                            pixelateCanvas.style.opacity = "0"
+                            video.style.opacity = "1"
+                        }
                     }
                 }
             }
@@ -658,7 +665,7 @@ const VideoPlayer: React.FunctionComponent = () => {
                 videoID = videoRef.current?.requestVideoFrameCallback(animateVideo) ?? 0
             }
 
-            if (fps > 0) {
+            if (adjustedData) {
                 if (paused) draw()
                 animationID = window.requestAnimationFrame(animateFPS)
             } else if (videoRef.current) {
@@ -674,15 +681,21 @@ const VideoPlayer: React.FunctionComponent = () => {
         pixelate, paused, seekTo, loop, abloop])
 
     useEffect(() => {
-        if (paused) {
+        const resetTimers = () => {
             lastTime = 0
             acc = 0
+        }
+        if (paused) resetTimers()
+
+        window.addEventListener("resize", resetTimers)
+        return () => {
+            window.removeEventListener("resize", resetTimers)
         }
     }, [paused])
 
     const getABBounds = useEffectEvent(() => {
-        const startTime = (duration / 100) * loopStart
-        const endTime = (duration / 100) * loopEnd
+        let startTime = (duration / 100) * loopStart
+        let endTime = (duration / 100) * loopEnd
         return {startTime, endTime}
     })
 
@@ -987,22 +1000,20 @@ const VideoPlayer: React.FunctionComponent = () => {
         }
         setProcessing(false)
         if (reverse) {
-            let percent = videoRef.current.currentTime / videoRef.current.duration
-            const newTime = (1-percent) * videoRef.current.duration
+            const currentTime = videoRef.current.currentTime
             setVideoLoaded(false)
             skipLoad = true
             videoRef.current.src = forwardSrc ?? ""
-            videoRef.current.currentTime = newTime
+            videoRef.current.currentTime = currentTime
             videoRef.current.play()
             refreshState()
             setReverse(false)
         } else {
-            let percent = videoRef.current.currentTime / videoRef.current.duration
-            const newTime = (1-percent) * videoRef.current.duration
+            const currentTime = videoRef.current.currentTime
             setVideoLoaded(false)
             skipLoad = true
             videoRef.current.src = reverseSource
-            videoRef.current.currentTime = newTime
+            videoRef.current.currentTime = currentTime
             videoRef.current.play()
             refreshState()
             setReverse(true)
@@ -1032,9 +1043,10 @@ const VideoPlayer: React.FunctionComponent = () => {
 
     const seek = (position: number) => {
         const duration = getDuration()
-        const progress = reverse ? (duration / 100) * (100 - position) : 
+        let progress = reverse ? (duration / 100) * (100 - position) : 
             (duration / 100) * position
 
+        if (videoData && videoRef.current) progress = duration - progress
         if (videoRef.current) videoRef.current.currentTime = progress
         setProgress(progress)
         setDragging(false)
@@ -1109,11 +1121,16 @@ const VideoPlayer: React.FunctionComponent = () => {
         const current = videoRef.current ? videoRef.current.currentTime : progress
         const duration = getDuration()
 
-        const start = reverse ? (duration / 100) * (100 - loopStart) 
+        let start = reverse ? (duration / 100) * (100 - loopStart) 
             : (duration / 100) * loopStart
 
-        const end = reverse ? (duration / 100) * (100 - loopEnd) 
+        let end = reverse ? (duration / 100) * (100 - loopEnd) 
             : (duration / 100) * loopEnd
+
+        if (videoData && videoRef.current) {
+            start = duration - start
+            end = duration - end
+        }
 
         if (reverse) {
             if (current > start || current < end) {
@@ -1143,6 +1160,8 @@ const VideoPlayer: React.FunctionComponent = () => {
         const duration = getDuration()
 
         let newTime = reverse ? current + value : current - value
+        if (videoData && videoRef.current) newTime = reverse ? current - value : current + value
+
         if (newTime < 0) newTime = 0
         if (newTime > duration) newTime = duration
         if (videoRef.current) videoRef.current!.currentTime = newTime
@@ -1157,6 +1176,7 @@ const VideoPlayer: React.FunctionComponent = () => {
         const duration = getDuration()
 
         let newTime = reverse ? current - value : current + value
+        if (videoData && videoRef.current) newTime = reverse ? current + value : current - value
 
         if (newTime < 0) newTime = 0
         if (newTime > duration) newTime = duration

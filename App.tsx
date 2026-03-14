@@ -25,7 +25,7 @@ const App = () => {
 
   useEffect(() => {
     window.ipcRenderer.on("debug", console.log)
-  })
+  }, [])
   
   return (
     <main className="app" onMouseEnter={() => setHover(true)} onMouseLeave={() => !fxDialogActive && setHover(false)}>
