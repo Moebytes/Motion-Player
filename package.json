@@ -26,6 +26,7 @@
       "buildResources": "assets",
       "output": "build"
     },
+    "electronLanguages": ["en"],
     "mac": {
       "icon": "assets/mas/icon.icns",
       "target": {
