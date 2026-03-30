@@ -1,6 +1,6 @@
 {
   "name": "frame-player",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Moebytes",
   "description": "A cute video player!",
   "main": "dist/main/index.js",
