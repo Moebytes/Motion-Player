@@ -22,17 +22,17 @@ process.setMaxListeners(0)
 let window: Electron.BrowserWindow | null
 
 let ffmpegPath = undefined as any
-if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.exe")
-if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
-if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
+if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../ffmpeg/ffmpeg.app")
+if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../ffmpeg/ffmpeg.exe")
+if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../ffmpeg/ffmpeg")
 if (process.env.DEVELOPMENT === "true") ffmpegPath = "./ffmpeg/ffmpeg.app"
 if (!fs.existsSync(ffmpegPath)) ffmpegPath = undefined
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
 
 let ffprobePath = undefined as any
-if (process.platform === "win32") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe.exe")
-if (process.platform === "darwin") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe")
-if (process.platform === "linux") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe")
+if (process.platform === "darwin") ffprobePath = path.join(app.getAppPath(), "../ffmpeg/ffprobe.app")
+if (process.platform === "win32") ffprobePath = path.join(app.getAppPath(), "../ffmpeg/ffprobe.exe")
+if (process.platform === "linux") ffprobePath = path.join(app.getAppPath(), "../ffmpeg/ffprobe")
 if (process.env.DEVELOPMENT === "true") ffprobePath = "./ffmpeg/ffprobe.app"
 if (!fs.existsSync(ffprobePath)) ffprobePath = undefined
 

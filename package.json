@@ -36,18 +36,14 @@
       "type": "distribution",
       "provisioningProfile": "assets/mas/MacAppStore.provisionprofile",
       "category": "public.app-category.video",
-      "extraFiles": [
-        {"from": "ffmpeg/ffmpeg.app", "to": "ffmpeg/ffmpeg"},
-        {"from": "ffmpeg/ffprobe.app", "to": "ffmpeg/ffprobe"}
+      "extraResources": [
+        "ffmpeg/ffmpeg.app",
+        "ffmpeg/ffprobe.app"
       ]
     },
     "mas": {
       "entitlements": "assets/mas/entitlements.mas.plist",
-      "entitlementsInherit": "assets/mas/entitlements.mas.inherit.plist",  
-      "binaries": [
-        "ffmpeg/ffmpeg",
-        "ffmpeg/ffprobe"
-      ]
+      "entitlementsInherit": "assets/mas/entitlements.mas.inherit.plist"
     },
     "dmg": {
       "title": "${productName}",
@@ -63,7 +59,7 @@
         "target": "appx",
         "arch": "x64"
       },
-      "extraFiles": [
+      "extraResources": [
         "ffmpeg/ffmpeg.exe",
         "ffmpeg/ffprobe.exe"
       ]
@@ -93,7 +89,7 @@
         "arch": "x64"
       },
       "category": "Video",
-      "extraFiles": [
+      "extraResources": [
         "ffmpeg/ffmpeg",
         "ffmpeg/ffprobe"
       ]
