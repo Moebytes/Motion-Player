@@ -43,7 +43,11 @@
     },
     "mas": {
       "entitlements": "assets/mas/entitlements.mas.plist",
-      "entitlementsInherit": "assets/mas/entitlements.mas.inherit.plist"
+      "entitlementsInherit": "assets/mas/entitlements.mas.inherit.plist",
+      "binaries": [
+        "build/mas-arm64/Frame Player.app/Contents/Resources/ffmpeg/ffmpeg.app",
+        "build/mas-arm64/Frame Player.app/Contents/Resources/ffprobe/ffprobe.app"
+      ]
     },
     "dmg": {
       "title": "${productName}",
