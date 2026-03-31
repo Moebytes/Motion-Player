@@ -27,6 +27,7 @@
       "output": "build"
     },
     "electronLanguages": ["en"],
+    "afterPack": "./afterpack.js",
     "mac": {
       "icon": "assets/mas/icon.icns",
       "target": {
@@ -36,18 +37,17 @@
       "type": "distribution",
       "provisioningProfile": "assets/mas/MacAppStore.provisionprofile",
       "category": "public.app-category.video",
-      "extraResources": [
+      "extraFiles": [
         {"from": "ffmpeg/ffmpeg.app", "to": "ffmpeg/ffmpeg"},
         {"from": "ffmpeg/ffprobe.app", "to": "ffmpeg/ffprobe"}
       ]
     },
     "mas": {
-      "hardenedRuntime": false,
       "entitlements": "assets/mas/entitlements.mas.plist",
       "entitlementsInherit": "assets/mas/entitlements.mas.inherit.plist",
       "binaries": [
-        "Contents/Resources/ffmpeg/ffmpeg",
-        "Contents/Resources/ffmpeg/ffprobe"
+        "ffmpeg/ffmpeg",
+        "ffmpeg/ffprobe"
       ]
     },
     "dmg": {
@@ -64,7 +64,7 @@
         "target": "appx",
         "arch": "x64"
       },
-      "extraResources": [
+      "extraFiles": [
         "ffmpeg/ffmpeg.exe",
         "ffmpeg/ffprobe.exe"
       ]
@@ -94,7 +94,7 @@
         "arch": "x64"
       },
       "category": "Video",
-      "extraResources": [
+      "extraFiles": [
         "ffmpeg/ffmpeg",
         "ffmpeg/ffprobe"
       ]

@@ -22,9 +22,9 @@ process.setMaxListeners(0)
 let window: Electron.BrowserWindow | null
 
 let ffmpegPath = undefined as any
-if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../ffmpeg/ffmpeg.exe")
-if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../ffmpeg/ffmpeg")
-if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../ffmpeg/ffmpeg")
+if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.exe")
+if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
+if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
 if (process.env.DEVELOPMENT === "true") ffmpegPath = "./ffmpeg/ffmpeg.app"
 if (!fs.existsSync(ffmpegPath)) ffmpegPath = undefined
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
