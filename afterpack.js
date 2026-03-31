@@ -7,8 +7,8 @@ exports.default = async function (context) {
     const appPath = context.appOutDir
     const appName = context.packager.appInfo.productFilename + ".app"
 
-    const ffmpegPath = path.join(appPath, appName, "Contents/Resources/ffmpeg/ffmpeg")
-    const ffprobePath = path.join(appPath, appName, "Contents/Resources/ffmpeg/ffprobe")
+    const ffmpegPath = path.join(appPath, appName, "ffmpeg/ffmpeg")
+    const ffprobePath = path.join(appPath, appName, "ffmpeg/ffprobe")
 
     fs.chmodSync(ffmpegPath, 0o755)
     fs.chmodSync(ffprobePath, 0o755)
