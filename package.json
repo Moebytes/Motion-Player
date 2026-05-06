@@ -26,7 +26,7 @@
       "buildResources": "assets",
       "output": "build"
     },
-    "electronLanguages": ["en"],
+    "electronLanguages": ["en-US"],
     "afterPack": "./afterpack.js",
     "mac": {
       "icon": "assets/mas/icon.icns",

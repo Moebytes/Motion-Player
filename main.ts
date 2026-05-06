@@ -21,20 +21,40 @@ import pack from "./package.json"
 process.setMaxListeners(0)
 let window: Electron.BrowserWindow | null
 
+if (process.platform === "darwin") {
+  const teamId = "EKBT5ADU6E"
+  const groupPath = path.join(os.homedir(), `Library/Group Containers/${teamId}.${pack.build.appId}`)
+  if (!fs.existsSync(groupPath)) fs.mkdirSync(groupPath, {recursive: true})
+  app.setPath("userData", groupPath)
+}
+
+const videoCacheLocation = path.join(app.getPath("userData"), "assets")
+
 let ffmpegPath = undefined as any
 if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.exe")
 if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.app")
 if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
 if (process.env.DEVELOPMENT === "true") ffmpegPath = "./ffmpeg/ffmpeg.app"
-if (!fs.existsSync(ffmpegPath)) ffmpegPath = undefined
-if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
 
 let ffprobePath = undefined as any
 if (process.platform === "win32") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe.exe")
 if (process.platform === "darwin") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe.app")
 if (process.platform === "linux") ffprobePath = path.join(app.getAppPath(), "../../ffmpeg/ffprobe")
 if (process.env.DEVELOPMENT === "true") ffprobePath = "./ffmpeg/ffprobe.app"
+
+if (process.platform === "win32" && app.isPackaged) {
+  // On Windows write the files to a location we have permission to access
+  let oldFFmpeg = ffmpegPath
+  let oldFFprobe = ffprobePath
+  ffmpegPath = path.join(videoCacheLocation, "ffmpeg/ffmpeg.exe")
+  ffprobePath = path.join(videoCacheLocation, "ffmpeg/ffprobe.exe")
+  if (!fs.existsSync(ffmpegPath)) mainFunctions.copyRecursive(path.dirname(oldFFmpeg), path.dirname(ffmpegPath))
+  if (!fs.existsSync(ffprobePath)) mainFunctions.copyRecursive(path.dirname(oldFFprobe), path.dirname(ffprobePath))
+}
+
+if (!fs.existsSync(ffmpegPath)) ffmpegPath = undefined
 if (!fs.existsSync(ffprobePath)) ffprobePath = undefined
+if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
 
 const store = new Store()
 let initialTransparent = process.platform === "win32" ? store.get("transparent", false) as boolean : true
@@ -45,15 +65,6 @@ let filePath = ""
 let chapters = [] as VideoChapter[]
 let audioTracks = [] as VideoTrack[]
 let subtitleTracks = [] as VideoTrack[]
-
-if (process.platform === "darwin") {
-  const teamId = "EKBT5ADU6E"
-  const groupPath = path.join(os.homedir(), `Library/Group Containers/${teamId}.${pack.build.appId}`)
-  if (!fs.existsSync(groupPath)) fs.mkdirSync(groupPath, {recursive: true})
-  app.setPath("userData", groupPath)
-}
-
-const videoCacheLocation = path.join(app.getPath("userData"), "assets")
 
 ipcMain.handle("close", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -271,7 +282,7 @@ ipcMain.handle("next", async (event, videoFile: string) => {
   if (videoFile.startsWith("http")) return
   if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
   const directory = path.dirname(videoFile)
-  const files = await mainFunctions.getSortedFiles(directory)
+  const files = await mainFunctions.getSortedFiles(directory, window!)
   const index = files.findIndex((f) => f === path.basename(videoFile))
   if (index !== -1) {
     if (files[index + 1]) return `file:///${directory}/${files[index + 1]}`
@@ -284,7 +295,7 @@ ipcMain.handle("previous", async (event, videoFile: string) => {
   if (videoFile.startsWith("http")) return
   if (videoFile.startsWith("file:///")) videoFile = videoFile.replace("file:///", "")
   const directory = path.dirname(videoFile)
-  const files = await mainFunctions.getSortedFiles(directory)
+  const files = await mainFunctions.getSortedFiles(directory, window!)
   const index = files.findIndex((f) => f === path.basename(videoFile))
   if (index !== -1) {
     if (files[index - 1]) return `file:///${directory}/${files[index - 1]}`

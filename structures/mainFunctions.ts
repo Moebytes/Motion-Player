@@ -75,6 +75,21 @@ export default class MainFunctions {
             .map(file => file.name)
     }
 
+    public static copyRecursive = (src: string, dest: string) => {
+        if (!fs.existsSync(dest)) fs.mkdirSync(dest, {recursive: true})
+
+        for (const file of fs.readdirSync(src)) {
+            const srcFile = path.join(src, file)
+            const destFile = path.join(dest, file)
+
+            if (fs.statSync(srcFile).isDirectory()) {
+                MainFunctions.copyRecursive(srcFile, destFile)
+            } else {
+                fs.copyFileSync(srcFile, destFile)
+            }
+        }
+    }
+
     public static removeDirectory = (dir: string) => {
         if (!fs.existsSync(dir)) return
         fs.readdirSync(dir).forEach((file: string) => {
